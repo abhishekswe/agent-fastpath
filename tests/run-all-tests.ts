@@ -5,8 +5,10 @@
 
 import { runUnitTests } from './unit/unit.test.js';
 import { runContractTests } from './contract/contract.test.js';
+import { runRealMcpClientTests } from './contract/real-mcp-client.test.js';
 import { runSecurityTests } from './security/security.test.js';
 import { runE2ETests } from './e2e/e2e.test.js';
+import { runRealBrowserTests } from './e2e/real-browser.test.js';
 
 async function runAll() {
   console.log('═══════════════════════════════════════════════════════════════');
@@ -18,9 +20,13 @@ async function runAll() {
     console.log();
     await runContractTests();
     console.log();
+    await runRealMcpClientTests();
+    console.log();
     await runSecurityTests();
     console.log();
     await runE2ETests();
+    console.log();
+    await runRealBrowserTests();
     console.log();
 
     console.log('═══════════════════════════════════════════════════════════════');
