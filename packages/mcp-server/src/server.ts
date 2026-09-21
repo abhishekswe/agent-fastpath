@@ -38,6 +38,25 @@ export class FastpathMcpServer {
   private judgmentProvider: JudgmentProvider;
 
   constructor(options: FastpathServerOptions = {}) {
+    // Automatically load .env if TYPESAFE_API_KEY is not already present
+    if (!process.env.TYPESAFE_API_KEY) {
+      const candidatePaths = [
+        './.env',
+        '../.env',
+        '../../.env',
+        '/Users/abhishek/.gemini/antigravity-ide/scratch/agentctl-fastpath/.env',
+        '/Users/abhishek/.gemini/antigravity-ide/scratch/.env'
+      ];
+      for (const p of candidatePaths) {
+        try {
+          if (typeof process.loadEnvFile === 'function') {
+            process.loadEnvFile(p);
+            if (process.env.TYPESAFE_API_KEY) break;
+          }
+        } catch {}
+      }
+    }
+
     // Lazy-initialize providers; do NOT start browsers or network connections at construction/import
     this.judgmentProvider =
       options.judgmentProvider ||

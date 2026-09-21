@@ -3,11 +3,38 @@
  * agentctl-fastpath CLI
  */
 
+import { existsSync } from 'fs';
+import { resolve, dirname } from 'path';
+import { fileURLToPath } from 'url';
 import { Command } from 'commander';
 import { runStdioServer } from '@agentctl/mcp-server';
 import { CapabilityRouter } from '@agentctl/core';
 import { TypeSafeJudgmentProvider, MockTypeSafeProvider } from '@agentctl/provider-typesafe';
 import { chromium } from 'playwright';
+
+// Automatically load .env if TYPESAFE_API_KEY is not already set
+if (!process.env.TYPESAFE_API_KEY) {
+  const currentDir = dirname(fileURLToPath(import.meta.url));
+  const candidatePaths = [
+    resolve(process.cwd(), '.env'),
+    resolve(currentDir, '../../.env'),
+    resolve(currentDir, '../../../.env'),
+    resolve(currentDir, '../../../../.env'),
+    '/Users/abhishek/.gemini/antigravity-ide/scratch/agentctl-fastpath/.env',
+    '/Users/abhishek/.gemini/antigravity-ide/scratch/.env'
+  ];
+
+  for (const envPath of candidatePaths) {
+    if (existsSync(envPath)) {
+      try {
+        if (typeof process.loadEnvFile === 'function') {
+          process.loadEnvFile(envPath);
+          if (process.env.TYPESAFE_API_KEY) break;
+        }
+      } catch {}
+    }
+  }
+}
 
 const program = new Command();
 
