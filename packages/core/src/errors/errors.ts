@@ -36,9 +36,11 @@ export class IrreversibleActionError extends FastpathError {
 }
 
 export class StaleObservationError extends FastpathError {
-  constructor(targetRef: string, expectedObsId: string, currentObsId: string) {
+  constructor(targetRef: string, expectedObsId: string, currentObsId: string, reason?: string) {
     super(
-      `Target element '${targetRef}' is bound to observation '${expectedObsId}' but current observation is '${currentObsId}'. Element state may have mutated.`,
+      reason
+        ? `Target '${targetRef}' rejected: ${reason}. Current observation is '${currentObsId}'.`
+        : `Target element '${targetRef}' is bound to observation '${expectedObsId}' but current observation is '${currentObsId}'. Observe again and use a fresh ref.`,
       'STALE_OBSERVATION_REFERENCE',
       'escalate',
       false,

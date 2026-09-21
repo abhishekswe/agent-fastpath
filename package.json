@@ -7,14 +7,18 @@
     "packages/*"
   ],
   "scripts": {
-    "build": "npm run --workspaces --if-present build",
-    "test": "tsx tests/run-all-tests.ts",
+    "build": "node scripts/build.mjs",
+    "typecheck": "tsc --noEmit",
+    "test": "node --import tsx --test --test-concurrency=1 tests/unit/*.test.ts tests/integration/*.test.ts tests/e2e/*.test.ts",
+    "test:live": "node --import tsx tests/live/live-scenarios.ts",
+    "check": "npm run typecheck && npm test && npm run build && node --import tsx --test tests/smoke/*.smoke.ts",
     "bench": "tsx packages/benchmark/src/run.ts",
     "start": "tsx packages/cli/src/index.ts start",
     "doctor": "tsx packages/cli/src/index.ts doctor"
   },
   "devDependencies": {
     "@types/node": "^22.10.1",
+    "esbuild": "^0.25.0",
     "tsx": "^4.19.2",
     "typescript": "^5.7.2"
   }

@@ -36,50 +36,57 @@ export class TypeSafeQuestionBuilder {
   }
 
   /**
-   * Normalizes raw TypeSafe System One response answers into typed TypedAnswer objects.
+   * Normalizes raw TypeSafe System One answers into TypedAnswer objects.
+   * All three answer types share one confidence scale: the probability of the reported answer.
    */
   public static normalizeAnswers(rawAnswers: Record<string, any>): Record<string, TypedAnswer> {
     const normalized: Record<string, TypedAnswer> = {};
 
     for (const [key, raw] of Object.entries(rawAnswers)) {
-      if (raw.choice !== undefined) {
-        // Choice answer
-        const probs: Record<string, number> = raw.probabilities || { [raw.choice]: raw.confidence ?? 1.0 };
-        const probValues = Object.values(probs).sort((a, b) => b - a);
-        const margin = probValues.length >= 2 ? probValues[0] - probValues[1] : undefined;
-        let runnerUp: string | undefined;
-        if (probValues.length >= 2) {
-          runnerUp = Object.entries(probs).find(([k, v]) => k !== raw.choice && v === probValues[1])?.[0];
-        }
+      const type = raw.type ?? (raw.choice !== undefined ? 'choice' : raw.score !== undefined ? 'score' : 'noul');
 
+      if (type === 'choice') {
+        const probs: Record<string, number> = raw.probabilities || { [raw.choice]: raw.confidence ?? 1.0 };
+        const ranked = Object.entries(probs).sort((a, b) => b[1] - a[1]);
+        const runnerUp = ranked.find(([k]) => k !== String(raw.choice));
         normalized[key] = {
           choice: String(raw.choice),
-          confidence: Number(raw.confidence ?? 0.5),
+          confidence: Number(raw.confidence ?? probs[raw.choice] ?? 0.5),
           probabilities: probs,
-          margin,
-          runnerUp
+          margin: runnerUp ? round((probs[raw.choice] ?? ranked[0][1]) - runnerUp[1]) : undefined,
+          runnerUp: runnerUp?.[0]
         };
-      } else if (raw.score !== undefined) {
-        // Score answer
-        const probs: number[] = Array.isArray(raw.probabilities) ? raw.probabilities : [];
+      } else if (type === 'score') {
         normalized[key] = {
           score: Number(raw.score),
           confidence: Number(raw.confidence ?? 0.5),
-          probabilities: probs
+          probabilities: toLevelArray(raw.probabilities)
         };
-      } else if (raw.noul !== undefined) {
-        // Noul answer (probability of yes)
+      } else {
         const pYes = Number(raw.noul);
-        // Confidence for Noul is distance from 0.5 (maximum uncertainty) scaled to [0, 1]
-        const confidence = Math.round(Math.abs(pYes - 0.5) * 2 * 100) / 100;
         normalized[key] = {
           noul: pYes,
           answer: pYes >= 0.5,
-          confidence
+          confidence: round(Math.max(pYes, 1 - pYes))
         };
       }
     }
 
     return normalized;
   }
+}
+
+/** The API returns score distributions as {"0": p0, "1": p1, ...}; expose them as [p0, p1, ...]. */
+function toLevelArray(probabilities: unknown): number[] {
+  if (Array.isArray(probabilities)) return probabilities.map(Number);
+  if (probabilities && typeof probabilities === 'object') {
+    return Object.entries(probabilities as Record<string, number>)
+      .sort((a, b) => Number(a[0]) - Number(b[0]))
+      .map(([, p]) => Number(p));
+  }
+  return [];
+}
+
+function round(n: number): number {
+  return Math.round(n * 1000) / 1000;
 }

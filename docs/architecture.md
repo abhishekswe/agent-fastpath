@@ -1,70 +1,42 @@
-# Architecture Specification: agentctl-fastpath
-
-`agentctl-fastpath` is a local-first MCP server designed to accelerate host AI coding agents (such as Codex, Claude Code, Cursor, OpenCode, and compatible ChatGPT clients) by providing bounded semantic judgments, rapid triage, and token-efficient browser operations.
-
----
-
-## 1. Core Architectural Principle
-
-**Deterministic logic first, TypeSafe System One (Jev) second, Browser provider third, and Host Agent escalation last.**
+# Architecture
 
 ```
-                 Host Agent (Codex / Claude Code / Cursor)
-                                    │
-                                    │ stdio MCP request
-                                    ▼
-                      agentctl-fastpath Server
-                                    │
-    ┌───────────────────────────────┴───────────────────────────────┐
-    │                                                               │
-    ▼                                                               ▼
-1. Deterministic Engine                                     2. Bounded Security Gate
-   • Schema validation                                         • SSRF & Private IP block
-   • Regex failure / pass match                                • Path traversal confinement
-   • Exact comparisons                                         • Irreversible action check
-   • Secret redaction (API keys/passwords)                     • Secret redaction
-    │ (if not deterministically resolved)                           │
-    ▼                                                               ▼
-3. Capability Router                                        4. Browser Provider
-   • Selects optimal provider                                  • Atomic DOM observation
-   • Formulates speculative questions                          • Cryptographic token binding
-   • TypeSafe System One (Jev) API                             • Node-backed indexed targets
-    │                                                               │
-    └───────────────────────────────┬───────────────────────────────┘
-                                    │
-                                    ▼
-                         5. Confidence Gate
-                            • Threshold validation (accept >= 0.75)
-                            • Probability margin check (margin >= 0.15)
-                            • Escalate / Review upon ambiguity
-                                    │
-                                    ▼
-                         6. Result Compactor
-                            • Minimal typed JSON
-                            • Opaque trace_id in EvidenceStore
-                            • Avoids sending raw files / DOM / logs
-                                    │
-                                    ▼
-                         Compact Typed MCP Response
+host agent (Claude Code, Cursor, Codex)
+        │  MCP over stdio
+        ▼
+agentctl-fastpath
+  ├─ fastpath_evaluate ─┐
+  ├─ fastpath_triage ───┼─► capability router
+  │                     │     1. redact secrets, enforce size limit
+  │                     │     2. deterministic rules (CI logs, destructive commands)
+  │                     │     3. judgment provider (TypeSafe System One)
+  │                     │     4. confidence gate → accept / review / escalate
+  ├─ fastpath_browser ──┼─► browser provider (Playwright, egress proxy)
+  │                     │     semantic steps (check, choose) go back through the router
+  ├─ fastpath_evidence ─┴─► in-memory trace store
+  └─ fastpath_capabilities
 ```
 
----
+## Decision order
 
-## 2. Decision Flow Hierarchy
+1. **Deterministic rules.** If a regex can answer with certainty, it does, in under a millisecond: failing or passing CI output for `ship_gate`, `rm -rf /` or `DROP TABLE` for `risk`, an OOM crash for `severity`.
+2. **Semantic judgment.** Otherwise the questions go to TypeSafe System One in one request. Each answer is typed: `choice` (option plus distribution), `score` (0-based level plus distribution), or `noul` (probability of yes).
+3. **Confidence gate.** Every answer has a confidence on the same scale: the probability of the reported answer.
+   - Below `escalationThreshold` (0.55): `escalate`. Decide yourself or ask the user.
+   - Top two choices within `minMargin` (0.15): `review`.
+   - At or above `confidenceThreshold` (0.75): `accept`.
+   - Otherwise: `review`.
+4. **Preset overrides.** A preset can escalate on its own finding. `ambiguity` escalates with `recommendedAction: "ask_user"` when it detects ambiguity, even when the model is sure, because the user has to resolve it.
 
-1. **Deterministic Check:** If regular expressions, exit codes, exact strings, or known schemas can answer the request with 100% certainty (e.g. test runner failure logs or known destructive commands), the server resolves immediately in <1ms without calling remote APIs.
-2. **Semantic Judgment:** When bounded judgment is required, the request is dispatched to TypeSafe System One (Jev). Questions (Choice, Score, Noul) are asked in parallel in a single speculative network pass.
-3. **Bounded Browser Operations:** If the caller requests browser interaction, operations execute in bounded cycles (`open`, `observe`, `act`, `check`, `choose`, `run_bounded`). Interactive targets are stamped with ephemeral observation tokens (`obs_<uuid>:<index>`). Actions referencing stale observation tokens are immediately rejected.
-4. **Escalation & Control:** If confidence is below threshold or choices are ambiguous, the server returns an `escalate` or `review` status with reason codes, passing control cleanly back to the host agent without guessing.
+## Packages
 
----
+| Package | Role |
+| --- | --- |
+| `core` | Types, config, router, gate, presets, deterministic rules, redaction, traces |
+| `provider-typesafe` | TypeSafe System One client, answer normalization, test mock, unavailable placeholder |
+| `provider-browser` | Playwright sessions, element extraction, network policy, egress proxy |
+| `mcp-server` | Tool schemas and handlers, server wiring, stdio entrypoint |
+| `cli` | The published `agentctl-fastpath` command; bundles the packages above |
+| `benchmark` | Measures context avoided and latency against the real provider |
 
-## 3. Tool Surface
-
-| MCP Tool | Purpose | Primary Output |
-| :--- | :--- | :--- |
-| `fastpath_evaluate` | Run typed semantic evaluations or standard presets | Typed answers, confidence, margin, and metrics |
-| `fastpath_triage` | Rank and filter items or repository files without raw context pollution | Top N ranked IDs, scores, and compact snippets |
-| `fastpath_browser` | Execute one bounded browser operation or outcome verification | Compact element summary table and verification verdict |
-| `fastpath_evidence` | Inspect expanded questions, raw distributions, and timing for a `traceId` | Full structured diagnostic record |
-| `fastpath_capabilities` | Inspect active providers, presets, safety limits, and security configuration | Capabilities object without secrets |
+Only `cli` is published. The others are internal workspace packages bundled into it at build time.

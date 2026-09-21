@@ -32,36 +32,22 @@ export class ObservationTokenManager {
    * Target reference must be formatted as: `obs_<hex>:<index>`
    */
   public resolveAndValidateTarget(targetRef: string): InteractiveElement {
-    if (!targetRef || !targetRef.includes(':')) {
-      throw new StaleObservationError(
-        targetRef,
-        this.currentObservationId,
-        'Invalid targetRef format. Expected "obs_<id>:<index>"'
-      );
+    const current = this.currentObservationId;
+    const match = /^(obs_[0-9a-f]+):(\d+)$/.exec(targetRef ?? '');
+    if (!match) {
+      throw new StaleObservationError(targetRef, '', current, 'expected format "obs_<id>:<index>"');
     }
-
-    const [obsId] = targetRef.split(':');
-    if (obsId !== this.currentObservationId) {
-      throw new StaleObservationError(targetRef, obsId, this.currentObservationId);
+    if (match[1] !== current) {
+      throw new StaleObservationError(targetRef, match[1], current);
     }
 
     const element = this.elementsByRef.get(targetRef);
     if (!element) {
-      throw new StaleObservationError(
-        targetRef,
-        this.currentObservationId,
-        'Element not found in current observation table'
-      );
+      throw new StaleObservationError(targetRef, match[1], current, 'no such element in the current observation');
     }
-
     if (element.disabled) {
-      throw new StaleObservationError(
-        targetRef,
-        this.currentObservationId,
-        'Target element is disabled'
-      );
+      throw new StaleObservationError(targetRef, match[1], current, 'element is disabled');
     }
-
     return element;
   }
 }

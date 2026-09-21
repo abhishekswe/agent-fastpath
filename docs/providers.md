@@ -1,58 +1,49 @@
-# Provider Integration Guide: agentctl-fastpath
+# Providers
 
-`agentctl-fastpath` enforces strict boundaries between core routing policies and execution providers. Providers are pluggable interfaces that can be substituted without altering MCP tool schemas.
+Judgment and browser work sit behind two interfaces in `@agentctl/core`, so either can be replaced without changing the tools.
 
----
+## Judgment provider
 
-## 1. Judgment Provider (`JudgmentProvider`)
-
-Responsible for executing typed evaluations against state using TypeSafe System One (Jev) models.
-
-```typescript
-export interface JudgmentRequest {
-  state: string | Record<string, unknown>;
-  questions: Record<string, QuestionDef>;
-  deadlineMs?: number;
-}
-
-export interface JudgmentResult {
-  answers: Record<string, TypedAnswer>;
-  rawUsage?: { inputTokens?: number; outputTokens?: number };
-  latencyMs: number;
-  model: string;
-}
-
-export interface JudgmentProvider {
+```ts
+interface JudgmentProvider {
   readonly id: string;
+  readonly available: boolean; // false: the router escalates instead of calling evaluate
+  readonly model: string;
   evaluate(request: JudgmentRequest): Promise<JudgmentResult>;
   checkHealth(): Promise<{ healthy: boolean; latencyMs: number; error?: string }>;
 }
 ```
 
-### Implemented Providers:
-- `TypeSafeJudgmentProvider` (`@agentctl/provider-typesafe`): Production integration communicating with `https://api.typesafe.ai/v1/systemone` using `@typesafe-ai/sdk` with exponential backoff retries and deadline enforcement.
-- `MockTypeSafeProvider`: Deterministic offline provider for CI, development, and unit testing when `TYPESAFE_API_KEY` is not present.
+Implementations:
 
----
+- `TypeSafeJudgmentProvider`: calls `https://api.typesafe.ai/v1/systemone`. Retries timeouts, 429s, and 5xx twice with backoff; fails fast on other 4xx.
+- `UnavailableJudgmentProvider`: used when no API key is set. Never called.
+- `MockTypeSafeProvider`: keyword heuristics for tests. Selected only with `FASTPATH_JUDGMENT=mock` or in code.
 
-## 2. Browser Provider (`BrowserProvider`)
+Answers are normalized so every type reports `confidence` as the probability of its answer:
 
-Responsible for isolated, bounded browser lifecycle, atomic observation, and action execution.
+```ts
+{ choice: 'sev1', confidence: 0.93, probabilities: { sev1: 0.95, sev2: 0.05 }, margin: 0.9, runnerUp: 'sev2' }
+{ score: 2.35, confidence: 0.65, probabilities: [0, 0, 0.65, 0.35] }
+{ noul: 0.18, answer: false, confidence: 0.82 }
+```
 
-```typescript
-export interface BrowserProvider {
+## Browser provider
+
+```ts
+interface BrowserProvider {
   readonly id: string;
-  createSession(options?: BrowserSessionOptions): Promise<string>;
+  createSession(options: { limits: SessionLimits }): Promise<string>;
   closeSession(sessionId: string): Promise<void>;
+  closeAll(): Promise<void>;
   getSession(sessionId: string): BrowserSessionInfo | undefined;
   navigate(sessionId: string, url: string): Promise<void>;
   observe(sessionId: string): Promise<BrowserObservation>;
-  act(sessionId: string, action: BrowserAction, target?: InteractiveElement): Promise<BrowserActionResult>;
-  checkOutcome(sessionId: string, assertion: string): Promise<BrowserOutcomeResult>;
-  chooseAction(sessionId: string, goal: string): Promise<{ action: BrowserAction; confidence: number }>;
+  act(sessionId: string, action: BrowserAction, options?: { allowIrreversible?: boolean }): Promise<BrowserActionResult>;
+  checkOutcome(sessionId: string, assertion: string): Promise<BrowserOutcomeResult>; // exact phrase
+  readPageText(sessionId: string, maxChars: number): Promise<string>;
   checkHealth(): Promise<{ healthy: boolean; latencyMs: number; error?: string }>;
 }
 ```
 
-### Implemented Providers:
-- `PlaywrightBrowserProvider` (`@agentctl/provider-browser`): Launches isolated headless Chromium contexts on demand, enforces observation tokens (`obs_<hex>:<index>`), extracts interactive element summaries, and enforces SSRF boundaries.
+`PlaywrightBrowserProvider` is the implementation. A replacement must enforce the same guarantees: the network policy on every connection, the irreversible-action gate in `act`, and observation-bound refs. See [security](security.md).

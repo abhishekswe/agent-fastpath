@@ -3,3 +3,6 @@ dist/
 *.tsbuildinfo
 .env
 .DS_Store
+packages/cli/README.md
+packages/cli/LICENSE
+*.tgz

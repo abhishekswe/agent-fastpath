@@ -1,13 +1,27 @@
 /**
- * Result Compactor: Compresses outputs into minimal typed shapes,
- * avoids leaking raw context, and measures tokens avoided.
+ * Result Compactor: keeps responses small and measures the context the host avoided.
  */
 
-import { FastpathMetrics, TypedAnswer } from '../contracts/types.js';
+import { DecisionPath, FastpathMetrics } from '../contracts/types.js';
+
+export interface MetricsInput {
+  /** Bytes the fastpath evaluated. */
+  stateBytes: number;
+  /**
+   * Bytes the fastpath read on the host's behalf that never entered the host context
+   * (file contents, page HTML). Zero when the host supplied the state inline.
+   */
+  unseenBytes: number;
+  /** The compact response returned to the host. */
+  response: unknown;
+  latencyMs: number;
+  provider: string;
+  decisionPath: DecisionPath;
+}
 
 export class ResultCompactor {
   /**
-   * Estimates tokens from character count using standard ~4 chars/token heuristic.
+   * Estimates tokens from character count using the standard ~4 chars/token heuristic.
    */
   public static estimateTokens(text: string): number {
     if (!text) return 0;
@@ -15,37 +29,24 @@ export class ResultCompactor {
   }
 
   /**
-   * Calculates metrics for tokens and turns avoided by using the fast path.
+   * Builds response metrics. `estimatedTokensSaved` counts only content the host did not
+   * have to read, minus the size of what it receives instead.
    */
-  public static computeMetrics(
-    rawState: string | Record<string, unknown>,
-    compactResponse: unknown,
-    latencyMs: number,
-    provider: string,
-    decisionPath: 'deterministic' | 'semantic_jev' | 'browser' | 'escalation'
-  ): FastpathMetrics {
-    const rawText = typeof rawState === 'string' ? rawState : JSON.stringify(rawState);
-    const compactText = JSON.stringify(compactResponse);
-
-    const rawTokens = this.estimateTokens(rawText);
-    const compactTokens = this.estimateTokens(compactText);
-
-    // Baseline host agent call requires sending the raw state plus system prompt overhead (~400 tokens)
-    // plus generating conversational explanations (~250 tokens).
-    const estimatedTokensSaved = Math.max(0, rawTokens + 650 - compactTokens);
-
+  public static computeMetrics(input: MetricsInput): FastpathMetrics {
+    const unseenTokens = Math.ceil(input.unseenBytes / 4);
+    const responseTokens = this.estimateTokens(JSON.stringify(input.response ?? null));
     return {
-      latencyMs,
-      estimatedTokensSaved,
+      latencyMs: input.latencyMs,
+      estimatedTokensSaved: Math.max(0, unseenTokens - responseTokens),
       hostTurnsSaved: 1,
-      provider,
-      stateBytesEvaluated: Buffer.byteLength(rawText, 'utf8'),
-      decisionPath
+      provider: input.provider,
+      stateBytesEvaluated: input.stateBytes,
+      decisionPath: input.decisionPath
     };
   }
 
   /**
-   * Extracts compact evidence reference without returning full raw dumps.
+   * Extracts a compact evidence reference without returning full raw dumps.
    */
   public static extractCompactSnippet(text: string, maxLength: number = 120): string {
     if (!text) return '';

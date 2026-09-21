@@ -1,27 +1,48 @@
 {
   "name": "agentctl-fastpath",
   "version": "0.1.0",
+  "description": "MCP server that gives coding agents fast typed decisions, file triage, and a bounded headless browser.",
   "type": "module",
+  "license": "MIT",
   "bin": {
-    "agentctl-fastpath": "./dist/index.js"
+    "agentctl-fastpath": "dist/index.js"
   },
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
-  "exports": {
-    ".": {
-      "import": "./src/index.ts",
-      "types": "./src/index.ts"
-    }
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=20.12"
   },
-  "scripts": {
-    "build": "tsc"
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/abhishekswe/agentctl-fastpath.git"
   },
+  "homepage": "https://github.com/abhishekswe/agentctl-fastpath#readme",
+  "bugs": {
+    "url": "https://github.com/abhishekswe/agentctl-fastpath/issues"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "claude-code",
+    "cursor",
+    "codex",
+    "ai-agents",
+    "playwright",
+    "llm"
+  ],
   "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.17.0",
+    "commander": "^13.1.0",
+    "playwright": "^1.50.0",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
     "@agentctl/core": "0.1.0",
     "@agentctl/mcp-server": "0.1.0",
-    "@agentctl/provider-typesafe": "0.1.0",
     "@agentctl/provider-browser": "0.1.0",
-    "chalk": "^5.4.1",
-    "commander": "^13.1.0"
+    "@agentctl/provider-typesafe": "0.1.0"
   }
 }
