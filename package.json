@@ -1,0 +1,21 @@
+{
+  "name": "agentctl-fastpath-monorepo",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "npm run --workspaces --if-present build",
+    "test": "tsx tests/run-all-tests.ts",
+    "bench": "tsx packages/benchmark/src/run.ts",
+    "start": "tsx packages/cli/src/index.ts start",
+    "doctor": "tsx packages/cli/src/index.ts doctor"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.1",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  }
+}

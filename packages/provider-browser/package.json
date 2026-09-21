@@ -1,0 +1,20 @@
+{
+  "name": "@agentctl/provider-browser",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./src/index.ts",
+      "types": "./src/index.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc"
+  },
+  "dependencies": {
+    "@agentctl/core": "0.1.0",
+    "playwright": "^1.50.0"
+  }
+}

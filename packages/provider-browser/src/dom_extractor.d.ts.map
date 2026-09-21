@@ -1,0 +1,1 @@
+{"version":3,"file":"dom_extractor.d.ts","sourceRoot":"","sources":["dom_extractor.ts"],"names":[],"mappings":"AAAA;;GAEG;AAEH,OAAO,EAAE,kBAAkB,EAAE,MAAM,gBAAgB,CAAC;AAGpD,qBAAa,YAAY;IACvB;;OAEG;WACW,iBAAiB,CAAC,QAAQ,EAAE,kBAAkB,EAAE,GAAG,MAAM;IAgCvE;;;OAGG;WACW,mBAAmB,CAAC,KAAK,EAAE,MAAM,GAAG,MAAM;CAuDzD"}
