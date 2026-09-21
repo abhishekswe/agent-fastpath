@@ -4,17 +4,28 @@
 
 import { z } from 'zod';
 import {
-  defaultEvidenceStore,
+  BrowserProvider,
+  EscalationGate,
   FastpathCapabilitiesOutput,
-  FastpathEvidenceInput,
   FastpathEvidenceOutput,
-  PRESET_REGISTRY
+  FastpathServerConfig,
+  JudgmentProvider,
+  PRESET_REGISTRY,
+  defaultEvidenceStore,
+  effectiveRoots
 } from '@agentctl/core';
+import { VERSION } from '../version.js';
 
-export const FastpathEvidenceSchema = z.object({
-  traceId: z.string().describe('Opaque trace identifier returned from a previous fastpath operation'),
-  detailLevel: z.enum(['summary', 'full']).optional().default('summary').describe('Detail level for diagnostics')
-});
+export const FastpathEvidenceShape = {
+  traceId: z.string().describe('traceId from a previous fastpath response'),
+  detailLevel: z
+    .enum(['summary', 'full'])
+    .optional()
+    .default('summary')
+    .describe('full adds the questions asked and diagnostics such as the gate result and policy.')
+};
+
+export const FastpathEvidenceSchema = z.object(FastpathEvidenceShape);
 
 export async function handleFastpathEvidence(
   args: z.infer<typeof FastpathEvidenceSchema>
@@ -29,55 +40,49 @@ export async function handleFastpathEvidence(
       decisionPath: 'unknown',
       latencyBreakdownMs: {},
       redactionsApplied: [],
-      diagnostics: { error: 'Trace ID not found or expired from ring buffer.' }
+      diagnostics: { error: 'Trace ID not found. Traces are kept in memory for the last 500 calls.' }
     };
   }
 
+  const full = args.detailLevel === 'full';
   return {
     traceId: trace.traceId,
     timestamp: trace.timestamp,
     tool: trace.tool,
-    status: trace.status as any,
+    status: trace.status as FastpathEvidenceOutput['status'],
     decisionPath: trace.decisionPath,
-    questions: args.detailLevel === 'full' ? trace.questions : undefined,
+    questions: full ? trace.questions : undefined,
     answers: trace.answers,
-    rawDistributions: args.detailLevel === 'full' ? trace.rawDistributions : undefined,
+    rawDistributions: full ? trace.rawDistributions : undefined,
     latencyBreakdownMs: trace.latencyBreakdownMs,
     redactionsApplied: trace.redactionsApplied,
-    diagnostics: trace.diagnostics
+    diagnostics: full ? trace.diagnostics : undefined
   };
 }
 
-export const FastpathCapabilitiesSchema = z.object({});
-
-export function handleFastpathCapabilities(): FastpathCapabilitiesOutput {
+export function handleFastpathCapabilities(
+  config: FastpathServerConfig,
+  judgment: JudgmentProvider,
+  browser: BrowserProvider
+): FastpathCapabilitiesOutput {
   return {
-    version: '0.1.0',
+    version: VERSION,
     providers: {
-      judgment: {
-        id: 'typesafe',
-        available: Boolean(process.env.TYPESAFE_API_KEY),
-        model: 'jev-latest'
-      },
-      browser: {
-        id: 'playwright',
-        available: true,
-        headless: true
-      },
-      deterministic: {
-        available: true
-      }
+      judgment: { id: judgment.id, available: judgment.available, model: judgment.model },
+      browser: { id: browser.id, available: true, headless: true },
+      deterministic: { available: true }
     },
     presets: Object.keys(PRESET_REGISTRY),
     limits: {
-      maxStateSizeBytes: 256 * 1024,
-      defaultConfidenceThreshold: 0.75,
-      maxBrowserSteps: 5,
-      allowedFilesystemRoots: [process.cwd()],
-      allowedBrowserOrigins: ['*']
+      maxStateSizeBytes: config.maxStateSizeBytes,
+      defaultConfidenceThreshold: EscalationGate.DEFAULT_CONFIDENCE_THRESHOLD,
+      maxBrowserSteps: config.maxBrowserSteps,
+      allowedFilesystemRoots: effectiveRoots(config),
+      allowedBrowserOrigins: config.allowedOrigins,
+      privateNetworksAllowed: config.allowPrivateNetworks
     },
     security: {
-      ssrfProtectionEnabled: true,
+      ssrfProtectionEnabled: !config.allowPrivateNetworks,
       irreversibleActionGateEnabled: true,
       redactionEnabled: true
     }

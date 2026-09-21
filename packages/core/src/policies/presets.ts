@@ -4,11 +4,18 @@
 
 import { QuestionDef } from '../contracts/types.js';
 
+export interface PresetDecision {
+  decision: string | number | boolean;
+  reasonCode: string;
+  /** The preset found a condition the host must resolve (for example, contradictory requirements). */
+  escalate?: boolean;
+}
+
 export interface PresetDefinition {
   name: string;
   description: string;
   buildQuestions: (params?: Record<string, unknown>) => Record<string, QuestionDef>;
-  synthesizeDecision?: (answers: Record<string, any>) => { decision: string | number | boolean; reasonCode: string };
+  synthesizeDecision?: (answers: Record<string, any>) => PresetDecision;
 }
 
 export const PRESET_REGISTRY: Record<string, PresetDefinition> = {
@@ -212,7 +219,8 @@ export const PRESET_REGISTRY: Record<string, PresetDefinition> = {
       const isAmb = answers.is_ambiguous?.noul > 0.5;
       return {
         decision: isAmb,
-        reasonCode: isAmb ? 'AMBIGUITY_DETECTED' : 'SPECIFICATION_CLEAR'
+        reasonCode: isAmb ? 'AMBIGUITY_DETECTED' : 'SPECIFICATION_CLEAR',
+        escalate: isAmb
       };
     }
   },
@@ -281,23 +289,16 @@ export const PRESET_REGISTRY: Record<string, PresetDefinition> = {
           NEEDS_REVIEW: 'Plausible change, but requires human review or additional manual testing',
           BLOCKED: 'Failing tests, build breaks, security risks, or unhandled errors present'
         }
-      },
-      confidence_score: {
-        type: 'score',
-        instructions: 'Rate certainty in the verification evidence.',
-        criteria: [
-          'Uncertain: Incomplete logs or ambiguous results',
-          'Moderate: Basic checks pass but edge cases untested',
-          'High: Rigorous unit, integration, and contract tests verified'
-        ]
       }
     }),
     synthesizeDecision: (answers) => {
-      const verdict = answers.ship_verdict?.choice;
-      return {
-        decision: verdict === 'READY_TO_SHIP' ? 'READY_TO_SHIP' : 'BLOCKED',
-        reasonCode: verdict === 'READY_TO_SHIP' ? 'SHIP_GATE_PASSED' : 'SHIP_GATE_HALTED'
+      const verdict: string = answers.ship_verdict?.choice ?? 'NEEDS_REVIEW';
+      const reasonCodes: Record<string, string> = {
+        READY_TO_SHIP: 'SHIP_GATE_PASSED',
+        NEEDS_REVIEW: 'SHIP_GATE_NEEDS_REVIEW',
+        BLOCKED: 'SHIP_GATE_HALTED'
       };
+      return { decision: verdict, reasonCode: reasonCodes[verdict] ?? 'SHIP_GATE_NEEDS_REVIEW' };
     }
   }
 };

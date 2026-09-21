@@ -27,24 +27,27 @@ export class DeterministicEngine {
   ): DeterministicEvaluationResult {
     const rawText = typeof state === 'string' ? state : JSON.stringify(state);
 
-    // 1. Exact Ship Gate Checks: if build/test logs clearly show failure or pass
+    // 1. Ship gate: decide from CI output when it is unambiguous. Any failure
+    //    signal wins over a pass signal, so "64 passed" plus "Lint: FAILED" blocks.
     if (preset === 'ship_gate') {
-      if (/BUILD FAILED|ERR! test failed|FAIL [a-zA-Z0-9_\-./]+\.test\./i.test(rawText)) {
+      const failure = SHIP_GATE_FAILURE_PATTERNS.find((p) => p.test(rawText));
+      if (failure) {
         return {
           handled: true,
           decision: 'BLOCKED',
           confidence: 1.0,
           reasonCode: 'DETERMINISTIC_TEST_FAILURE_DETECTED',
-          details: { pattern: 'FAIL/ERR in logs' }
+          details: { matchedPattern: failure.toString() }
         };
       }
-      if (/0 failed, [1-9][0-9]* passed|Tests:\s+[1-9][0-9]* passed,\s+0 failed/i.test(rawText)) {
+      const pass = SHIP_GATE_PASS_PATTERNS.find((p) => p.test(rawText));
+      if (pass) {
         return {
           handled: true,
           decision: 'READY_TO_SHIP',
           confidence: 0.99,
           reasonCode: 'DETERMINISTIC_TEST_SUCCESS_VERIFIED',
-          details: { pattern: 'All tests passed cleanly' }
+          details: { matchedPattern: pass.toString() }
         };
       }
     }
@@ -145,47 +148,97 @@ export class DeterministicEngine {
   }
 
   /**
+   * Narrows the server's allowed roots to the caller's requested roots.
+   * Every requested root must sit inside a server root; callers can never widen access.
+   */
+  public static narrowRoots(requested: string[] | undefined, serverRoots: string[]): string[] {
+    if (!requested || requested.length === 0) return serverRoots;
+    return requested.map((root) => this.validatePathWithinRoots(root, serverRoots));
+  }
+
+  /**
    * Redacts sensitive secrets, API keys, tokens, and credentials from text strings.
    */
   public static redactSecrets(content: string): { redacted: string; redactions: string[] } {
     const redactions: string[] = [];
     let text = content;
 
-    const secretPatterns: Array<{ name: string; regex: RegExp; replace: string }> = [
-      {
-        name: 'TypeSafe API Key',
-        regex: /(?:ts_[a-zA-Z0-9_-]{20,}|TYPESAFE_API_KEY\s*[=:]\s*['"]?)[a-zA-Z0-9_-]{20,}['"]?/gi,
-        replace: '[REDACTED_TYPESAFE_KEY]'
-      },
-      {
-        name: 'OpenAI API Key',
-        regex: /sk-(?:proj-)?[a-zA-Z0-9_-]{32,}/g,
-        replace: '[REDACTED_OPENAI_KEY]'
-      },
-      {
-        name: 'Anthropic API Key',
-        regex: /sk-ant-[a-zA-Z0-9_-]{32,}/g,
-        replace: '[REDACTED_ANTHROPIC_KEY]'
-      },
-      {
-        name: 'Generic Bearer Token',
-        regex: /Bearer\s+[a-zA-Z0-9._-]{24,}/gi,
-        replace: 'Bearer [REDACTED_TOKEN]'
-      },
-      {
-        name: 'Password Field',
-        regex: /("?(?:password|secret|token|apikey|api_key)"?\s*[:=]\s*)"[^"]+"/gi,
-        replace: '$1"[REDACTED]"'
-      }
-    ];
-
-    for (const p of secretPatterns) {
-      if (p.regex.test(text)) {
+    for (const p of SECRET_PATTERNS) {
+      const next = text.replace(p.regex, p.replace);
+      if (next !== text) {
         redactions.push(p.name);
-        text = text.replace(p.regex, p.replace);
+        text = next;
       }
     }
 
     return { redacted: text, redactions };
   }
 }
+
+const SHIP_GATE_FAILURE_PATTERNS: RegExp[] = [
+  /BUILD FAILED/i,
+  /ERR! test failed/i,
+  /\bFAIL\s+[\w\-./]+\.(?:test|spec)\./,
+  /\b[1-9]\d*\s+(?:failed|failing|errors?)\b/i,
+  /\b(?:build|lint|typecheck|type-check|tests?|ci|compile)\s*:\s*(?:failed|failure|error|errored)\b/i
+];
+
+const SHIP_GATE_PASS_PATTERNS: RegExp[] = [
+  /\b0 failed,\s*[1-9]\d* passed/i,
+  /Tests:\s+[1-9]\d* passed,\s+0 failed/i,
+  /Tests:\s+[1-9]\d* passed,\s+\d+ total/i,
+  /=+\s*[1-9]\d* passed(?:,\s*\d+ (?:skipped|warnings?|deselected))* in [\d.]+s/i
+];
+
+const SECRET_PATTERNS: Array<{ name: string; regex: RegExp; replace: string }> = [
+  {
+    name: 'Private Key Block',
+    regex: /-----BEGIN [A-Z ]*PRIVATE KEY-----[\s\S]*?-----END [A-Z ]*PRIVATE KEY-----/g,
+    replace: '[REDACTED_PRIVATE_KEY]'
+  },
+  {
+    name: 'TypeSafe API Key',
+    regex: /\b(?:apikey|ts)_[A-Za-z0-9_-]{20,}/g,
+    replace: '[REDACTED_TYPESAFE_KEY]'
+  },
+  {
+    name: 'Anthropic API Key',
+    regex: /\bsk-ant-[A-Za-z0-9_-]{32,}/g,
+    replace: '[REDACTED_ANTHROPIC_KEY]'
+  },
+  {
+    name: 'OpenAI API Key',
+    regex: /\bsk-(?:proj-)?[A-Za-z0-9_-]{32,}/g,
+    replace: '[REDACTED_OPENAI_KEY]'
+  },
+  {
+    name: 'GitHub Token',
+    regex: /\b(?:gh[pousr]_[A-Za-z0-9]{36,}|github_pat_[A-Za-z0-9_]{40,})/g,
+    replace: '[REDACTED_GITHUB_TOKEN]'
+  },
+  {
+    name: 'AWS Access Key',
+    regex: /\b(?:AKIA|ASIA)[A-Z0-9]{16}\b/g,
+    replace: '[REDACTED_AWS_KEY]'
+  },
+  {
+    name: 'Slack Token',
+    regex: /\bxox[abprs]-[A-Za-z0-9-]{10,}/g,
+    replace: '[REDACTED_SLACK_TOKEN]'
+  },
+  {
+    name: 'Generic Bearer Token',
+    regex: /Bearer\s+[A-Za-z0-9._~+/-]{24,}=*/gi,
+    replace: 'Bearer [REDACTED_TOKEN]'
+  },
+  {
+    name: 'Secret Assignment',
+    regex: /(\b[A-Z0-9_]*(?:API_KEY|SECRET|TOKEN|PASSWORD)[A-Z0-9_]*\s*=\s*)['"]?[^\s'"]{8,}['"]?/g,
+    replace: '$1[REDACTED]'
+  },
+  {
+    name: 'Password Field',
+    regex: /("?(?:password|secret|token|apikey|api_key)"?\s*[:=]\s*)"[^"]+"/gi,
+    replace: '$1"[REDACTED]"'
+  }
+];

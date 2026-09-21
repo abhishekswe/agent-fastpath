@@ -3,7 +3,6 @@
  */
 
 import { InteractiveElement } from '@agentctl/core';
-import { BrowserSafety } from './safety.js';
 
 export class DomExtractor {
   /**
@@ -27,7 +26,7 @@ export class DomExtractor {
         if (el.value) flags.push(`val: "${el.value.slice(0, 25)}"`);
         if (el.checked) flags.push('checked');
         if (el.disabled) flags.push('disabled');
-        if (el.isIrreversible) flags.push('⚠️ IRREVERSIBLE');
+        if (el.isIrreversible) flags.push('IRREVERSIBLE');
         if (el.options && el.options.length > 0) {
           flags.push(`options: [${el.options.slice(0, 3).join(', ')}]`);
         }

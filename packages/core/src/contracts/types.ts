@@ -47,14 +47,43 @@ export interface NoulAnswer {
 
 export type TypedAnswer = ChoiceAnswer | ScoreAnswer | NoulAnswer;
 
+/**
+ * Per-call gating policy. Callers may tune how strict the gate is, but never
+ * the server's security limits (see FastpathServerConfig).
+ */
 export interface FastpathPolicyConfig {
-  confidenceThreshold?: number; // default 0.75
-  minMargin?: number; // minimum probability margin between top and runner-up
+  /** Minimum confidence for `accept`. Default 0.75. */
+  confidenceThreshold?: number;
+  /** Below this confidence the result escalates instead of asking for review. Default 0.55. */
+  escalationThreshold?: number;
+  /** Minimum probability gap between the top choice and the runner-up. Default 0.15. */
+  minMargin?: number;
+  /** Escalate when a preset detects ambiguity, and review on narrow margins. Default true. */
   escalateOnAmbiguity?: boolean;
-  allowIrreversible?: boolean;
-  maxStateSizeBytes?: number; // default 256KB
-  redactSecrets?: boolean; // default true
+  /** Lower the state size limit for this call. Cannot exceed the server limit. */
+  maxStateSizeBytes?: number;
 }
+
+/**
+ * Server-side limits. Set by the operator (env vars or constructor options),
+ * never by tool callers, because the caller is an LLM that can be prompt-injected.
+ */
+export interface FastpathServerConfig {
+  /** Filesystem roots triage may read from. */
+  allowedRoots: string[];
+  /** Browser navigation allowlist. Empty means any public origin. */
+  allowedOrigins: string[];
+  /** Allow the browser to reach loopback, private, and link-local addresses. */
+  allowPrivateNetworks: boolean;
+  /** Hard cap on browser steps per session. */
+  maxBrowserSteps: number;
+  /** Hard cap on evaluate state size. */
+  maxStateSizeBytes: number;
+  /** Browser navigation timeout. */
+  browserTimeoutMs: number;
+}
+
+export type DecisionPath = 'deterministic' | 'semantic_jev' | 'browser' | 'escalation';
 
 export interface FastpathMetrics {
   latencyMs: number;
@@ -62,7 +91,7 @@ export interface FastpathMetrics {
   hostTurnsSaved: number;
   provider: string;
   stateBytesEvaluated: number;
-  decisionPath: 'deterministic' | 'semantic_jev' | 'browser' | 'escalation';
+  decisionPath: DecisionPath;
 }
 
 export interface FastpathEvaluateInput {
@@ -82,6 +111,8 @@ export interface FastpathEvaluateOutput {
   answers: Record<string, TypedAnswer>;
   reasonCode: string;
   recommendedAction?: 'proceed' | 'inspect_evidence' | 'ask_user' | 'fallback_large_model';
+  /** Human-readable detail for errors and escalations. */
+  message?: string;
   traceId: string;
   metrics: FastpathMetrics;
 }
@@ -95,6 +126,7 @@ export interface TriageItem {
 
 export interface RankedTriageItem {
   id: string;
+  status: EvaluationStatus;
   score: number;
   confidence: number;
   reason?: string;
@@ -106,6 +138,7 @@ export interface FastpathTriageInput {
   query: string;
   items: TriageItem[];
   limit?: number;
+  /** Narrow the server's allowed roots for this call. */
   allowedRoots?: string[];
   policy?: FastpathPolicyConfig;
   deadlineMs?: number;
@@ -121,7 +154,7 @@ export interface FastpathTriageOutput {
   metrics: FastpathMetrics;
 }
 
-export type BrowserMode = 'open' | 'observe' | 'act' | 'check' | 'choose' | 'run_bounded';
+export type BrowserMode = 'open' | 'observe' | 'act' | 'check' | 'choose' | 'run_bounded' | 'close';
 
 export type BrowserOperation =
   | 'click'
@@ -154,6 +187,8 @@ export interface BrowserObservation {
   elements: InteractiveElement[];
   pageHealthScore: number;
   anomalies: string[];
+  /** Size of the page HTML the host did not have to read. */
+  rawHtmlBytes?: number;
 }
 
 export interface BrowserAction {
@@ -163,11 +198,19 @@ export interface BrowserAction {
   selectOption?: string;
 }
 
+/** Caller-supplied bounds. These can only tighten the server limits. */
 export interface BrowserBounds {
   maxSteps?: number;
   timeoutMs?: number;
   allowedOrigins?: string[];
-  allowPrivateNetworks?: boolean;
+}
+
+/** Effective per-session limits after merging caller bounds with server config. */
+export interface SessionLimits {
+  maxSteps: number;
+  timeoutMs: number;
+  allowedOrigins: string[];
+  allowPrivateNetworks: boolean;
 }
 
 export interface FastpathBrowserInput {
@@ -183,6 +226,7 @@ export interface FastpathBrowserInput {
 
 export interface FastpathBrowserOutput {
   sessionId: string;
+  closed?: boolean;
   status: EvaluationStatus;
   url: string;
   observation?: BrowserObservation;
@@ -230,7 +274,9 @@ export interface FastpathCapabilitiesOutput {
     defaultConfidenceThreshold: number;
     maxBrowserSteps: number;
     allowedFilesystemRoots: string[];
+    /** Empty means any public origin. */
     allowedBrowserOrigins: string[];
+    privateNetworksAllowed: boolean;
   };
   security: {
     ssrfProtectionEnabled: boolean;

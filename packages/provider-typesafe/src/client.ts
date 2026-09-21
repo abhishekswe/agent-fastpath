@@ -20,9 +20,9 @@ export interface TypeSafeClientOptions {
 
 export class TypeSafeJudgmentProvider implements JudgmentProvider {
   public readonly id = 'typesafe';
+  public readonly model: string;
   private apiKey: string;
   private endpoint: string;
-  private model: string;
   private timeoutMs: number;
   private maxRetries: number;
 
@@ -34,11 +34,7 @@ export class TypeSafeJudgmentProvider implements JudgmentProvider {
     this.maxRetries = options.maxRetries ?? 2;
   }
 
-  public getModelName(): string {
-    return this.model;
-  }
-
-  public isConfigured(): boolean {
+  public get available(): boolean {
     return Boolean(this.apiKey);
   }
 
@@ -81,8 +77,13 @@ export class TypeSafeJudgmentProvider implements JudgmentProvider {
         clearTimeout(timer);
 
         if (!response.ok) {
-          const errBody = await response.text().catch(() => '');
-          throw new Error(`TypeSafe API responded with HTTP ${response.status}: ${errBody}`);
+          const errBody = (await response.text().catch(() => '')).slice(0, 500);
+          const error = new Error(`TypeSafe API responded with HTTP ${response.status}: ${errBody}`);
+          // Client errors (bad key, bad request) will not succeed on retry.
+          if (response.status >= 400 && response.status < 500 && response.status !== 429) {
+            throw new ProviderUnavailableError(this.id, error.message);
+          }
+          throw error;
         }
 
         const data: any = await response.json();
@@ -97,7 +98,8 @@ export class TypeSafeJudgmentProvider implements JudgmentProvider {
         };
       } catch (err: any) {
         clearTimeout(timer);
-        lastError = err;
+        if (err instanceof ProviderUnavailableError) throw err;
+        lastError = err?.name === 'AbortError' ? new Error(`TypeSafe API timed out after ${timeout}ms`) : err;
         if (attempt < this.maxRetries) {
           // exponential backoff: 100ms, 200ms
           await new Promise((resolve) => setTimeout(resolve, 100 * Math.pow(2, attempt)));

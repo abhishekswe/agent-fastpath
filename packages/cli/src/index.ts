@@ -1,38 +1,22 @@
 #!/usr/bin/env node
 /**
- * agentctl-fastpath CLI
+ * agentctl-fastpath CLI.
  */
 
 import { existsSync } from 'fs';
-import { resolve, dirname } from 'path';
-import { fileURLToPath } from 'url';
+import { resolve } from 'path';
 import { Command } from 'commander';
-import { runStdioServer } from '@agentctl/mcp-server';
-import { CapabilityRouter } from '@agentctl/core';
-import { TypeSafeJudgmentProvider, MockTypeSafeProvider } from '@agentctl/provider-typesafe';
-import { chromium } from 'playwright';
+import { CapabilityRouter, PRESET_REGISTRY } from '@agentctl/core';
+import { VERSION, createJudgmentProvider, runStdioServer } from '@agentctl/mcp-server';
 
-// Automatically load .env if TYPESAFE_API_KEY is not already set
-if (!process.env.TYPESAFE_API_KEY) {
-  const currentDir = dirname(fileURLToPath(import.meta.url));
-  const candidatePaths = [
-    resolve(process.cwd(), '.env'),
-    resolve(currentDir, '../../.env'),
-    resolve(currentDir, '../../../.env'),
-    resolve(currentDir, '../../../../.env'),
-    '/Users/abhishek/.gemini/antigravity-ide/scratch/agentctl-fastpath/.env',
-    '/Users/abhishek/.gemini/antigravity-ide/scratch/.env'
-  ];
-
-  for (const envPath of candidatePaths) {
-    if (existsSync(envPath)) {
-      try {
-        if (typeof process.loadEnvFile === 'function') {
-          process.loadEnvFile(envPath);
-          if (process.env.TYPESAFE_API_KEY) break;
-        }
-      } catch {}
-    }
+// A .env in the working directory is a convenience for local use. MCP clients should
+// pass TYPESAFE_API_KEY through their server config instead.
+const envFile = resolve(process.cwd(), '.env');
+if (existsSync(envFile)) {
+  try {
+    process.loadEnvFile(envFile);
+  } catch {
+    // Malformed .env: ignore, the doctor command reports the missing key.
   }
 }
 
@@ -40,98 +24,90 @@ const program = new Command();
 
 program
   .name('agentctl-fastpath')
-  .description('Local-first MCP acceleration layer for AI coding agents')
-  .version('0.1.0');
+  .description('MCP server that gives coding agents fast typed decisions, file triage, and a bounded browser')
+  .version(VERSION);
 
 program
   .command('start')
-  .description('Start the agentctl-fastpath MCP server over stdio')
+  .description('Start the MCP server over stdio')
   .action(async () => {
     await runStdioServer();
   });
 
 program
   .command('doctor')
-  .description('Verify system environment, API credentials, and browser runtime')
+  .description('Check Node.js, the API key, and the browser runtime')
   .action(async () => {
-    console.log('🩺 Running agentctl-fastpath environment doctor...\n');
+    let ok = true;
+    const line = (pass: boolean, label: string, detail: string) => {
+      if (!pass) ok = false;
+      console.log(`${pass ? 'ok  ' : 'FAIL'}  ${label}: ${detail}`);
+    };
 
-    // 1. Node.js check
-    const nodeVer = process.version;
-    console.log(`• Node.js version: ${nodeVer} (${parseInt(nodeVer.slice(1)) >= 20 ? '✅ PASS' : '❌ FAIL, requires Node 20+'})`);
+    const major = Number(process.versions.node.split('.')[0]);
+    line(major >= 20, 'Node.js', `${process.version}${major >= 20 ? '' : ' (need 20 or newer)'}`);
 
-    // 2. TypeSafe API Key
-    const apiKey = process.env.TYPESAFE_API_KEY;
-    if (apiKey) {
-      console.log(`• TypeSafe API Key: Configured (${apiKey.slice(0, 6)}...${apiKey.slice(-4)}) ✅`);
+    const provider = createJudgmentProvider();
+    if (provider.available) {
+      const health = await provider.checkHealth();
+      line(health.healthy, 'Judgment provider', health.healthy ? `${provider.id} reachable (${health.latencyMs} ms)` : health.error ?? 'unreachable');
     } else {
-      console.log('• TypeSafe API Key: NOT SET (Falling back to deterministic mock provider for local testing) ⚠️');
+      console.log('warn  Judgment provider: TYPESAFE_API_KEY not set. Deterministic checks work; semantic questions will escalate.');
     }
 
-    // 3. Playwright browser check
     try {
+      const { chromium } = await import('playwright');
       const browser = await chromium.launch({ headless: true });
       await browser.close();
-      console.log('• Playwright Chromium Engine: Available ✅');
+      line(true, 'Browser', 'Chromium launches');
     } catch (err: any) {
-      console.log(`• Playwright Chromium Engine: Failed to launch (${err.message}) ❌`);
-      console.log('  Run "npx playwright install chromium" to install missing browser binaries.');
+      line(false, 'Browser', `${String(err.message).split('\n')[0]}. Run: npx playwright install chromium`);
     }
 
-    console.log('\nSystem check complete.');
+    process.exitCode = ok ? 0 : 1;
   });
 
 program
   .command('eval')
-  .description('Execute a standalone fast-path evaluation from the command line')
-  .option('-p, --preset <preset>', 'Preset name (e.g. relevance, ship_gate, risk)', 'relevance')
-  .option('-s, --state <state>', 'State content to evaluate', 'All 42 unit tests passed cleanly.')
-  .option('-q, --query <query>', 'Optional query parameter', 'test status')
+  .description('Run one evaluation from the command line and print the JSON result')
+  .requiredOption('-s, --state <text>', 'Text to evaluate')
+  .option('-p, --preset <name>', `Preset (${Object.keys(PRESET_REGISTRY).join(', ')})`, 'relevance')
+  .option('-q, --query <text>', 'Query for the relevance preset')
+  .option('-c, --claim <text>', 'Claim for the verify_claim preset')
   .action(async (opts) => {
-    const provider = process.env.TYPESAFE_API_KEY
-      ? new TypeSafeJudgmentProvider()
-      : new MockTypeSafeProvider();
-
-    const router = new CapabilityRouter({ judgmentProvider: provider });
-    const res = await router.evaluate({
-      state: opts.state,
-      preset: opts.preset,
-      presetParams: { query: opts.query }
-    });
-
+    const router = new CapabilityRouter({ judgmentProvider: createJudgmentProvider() });
+    const presetParams: Record<string, unknown> = {};
+    if (opts.query) presetParams.query = opts.query;
+    if (opts.claim) presetParams.claim = opts.claim;
+    const res = await router.evaluate({ state: opts.state, preset: opts.preset, presetParams });
     console.log(JSON.stringify(res, null, 2));
   });
 
 program
   .command('install-config')
-  .description('Print MCP configuration snippet for Claude Code, Cursor, or Codex')
-  .argument('[client]', 'Target client (claude-code, cursor, codex)', 'claude-code')
-  .action((client) => {
-    console.log(`\n📋 Configuration for ${client}:\n`);
-
-    if (client === 'cursor') {
-      const config = {
-        mcpServers: {
-          'agentctl-fastpath': {
-            command: 'npx',
-            args: ['-y', 'agentctl-fastpath', 'start'],
-            env: {
-              TYPESAFE_API_KEY: process.env.TYPESAFE_API_KEY || 'your_api_key_here'
-            }
-          }
-        }
-      };
-      console.log('Add to ~/.cursor/mcp.json:');
-      console.log(JSON.stringify(config, null, 2));
-    } else if (client === 'claude-code') {
-      console.log('Run in your terminal:');
-      console.log('  claude mcp add agentctl-fastpath -- npx -y agentctl-fastpath start');
+  .description('Print the MCP configuration for a client')
+  .argument('[client]', 'claude-code, cursor, or codex', 'claude-code')
+  .action((client: string) => {
+    const serverEntry = {
+      command: 'npx',
+      args: ['-y', 'agentctl-fastpath', 'start'],
+      env: { TYPESAFE_API_KEY: '<your-typesafe-api-key>' }
+    };
+    if (client === 'claude-code') {
+      console.log('claude mcp add agentctl-fastpath -s user -e TYPESAFE_API_KEY=<your-typesafe-api-key> -- npx -y agentctl-fastpath start');
+    } else if (client === 'cursor') {
+      console.log('Add to ~/.cursor/mcp.json:\n');
+      console.log(JSON.stringify({ mcpServers: { 'agentctl-fastpath': serverEntry } }, null, 2));
+    } else if (client === 'codex') {
+      console.log('Add to ~/.codex/config.toml:\n');
+      console.log('[mcp_servers.agentctl-fastpath]');
+      console.log('command = "npx"');
+      console.log('args = ["-y", "agentctl-fastpath", "start"]');
+      console.log('env = { TYPESAFE_API_KEY = "<your-typesafe-api-key>" }');
     } else {
-      console.log('Generic stdio configuration:');
-      console.log('  Command: npx -y agentctl-fastpath start');
-      console.log('  Environment: TYPESAFE_API_KEY=<your_key>');
+      console.error(`Unknown client "${client}". Use claude-code, cursor, or codex.`);
+      process.exitCode = 1;
     }
-    console.log();
   });
 
-program.parse(process.argv);
+program.parseAsync(process.argv);

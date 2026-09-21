@@ -1,272 +1,411 @@
 /**
  * MCP tool handler for fastpath_browser.
+ *
+ * Deterministic browser work (observe, act, phrase checks) runs in the provider.
+ * Semantic steps (does the page satisfy a claim, which element serves a goal) go
+ * through the capability router, so they get the same confidence gate as evaluate.
  */
 
 import { z } from 'zod';
 import {
+  BrowserAction,
   BrowserObservation,
   BrowserProvider,
-  FastpathBrowserInput,
+  CapabilityRouter,
+  EvaluationStatus,
   FastpathBrowserOutput,
-  IrreversibleActionError,
+  FastpathServerConfig,
+  InteractiveElement,
   LocalEvidenceStore,
   PolicyBlockedError,
-  defaultEvidenceStore,
-  defaultMetricsRecorder
+  ResultCompactor,
+  SessionLimits
 } from '@agentctl/core';
 
-export const FastpathBrowserSchema = z.object({
+const PAGE_TEXT_FOR_JUDGMENT = 6000;
+const MAX_CHOICE_ELEMENTS = 40;
+
+export const FastpathBrowserShape = {
   mode: z
-    .enum(['open', 'observe', 'act', 'check', 'choose', 'run_bounded'])
-    .describe('Bounded browser operation mode'),
-  sessionId: z.string().optional().describe('Existing session identifier'),
-  url: z.string().optional().describe('Target web URL for open/navigate'),
+    .enum(['open', 'observe', 'act', 'check', 'choose', 'run_bounded', 'close'])
+    .describe(
+      'open: new session at url. observe: fresh element table. act: one action on a ref. ' +
+        'check: verify an assertion. choose: recommend the next action for a goal. ' +
+        'run_bounded: take up to maxSteps safe clicks toward a goal. close: end the session.'
+    ),
+  sessionId: z.string().optional().describe('Session from a previous open. Required for all modes except open.'),
+  url: z.string().optional().describe('URL for open.'),
   action: z
     .object({
       operation: z.enum(['click', 'type', 'select', 'scroll_down', 'scroll_up', 'wait']),
-      targetRef: z.string().optional(),
-      textValue: z.string().optional(),
-      selectOption: z.string().optional()
+      targetRef: z.string().optional().describe('Element ref from the latest observation, e.g. "obs_ab12cd:3".'),
+      textValue: z.string().optional().describe('Text for type.'),
+      selectOption: z.string().optional().describe('Option for select.')
     })
     .optional()
-    .describe('Action to execute in act mode'),
-  goal: z.string().optional().describe('Goal description for choose and run_bounded modes'),
-  assertion: z.string().optional().describe('Semantic condition to verify in check mode'),
+    .describe('Action for act.'),
+  goal: z.string().optional().describe('Goal for choose and run_bounded.'),
+  assertion: z.string().optional().describe('What should be true of the page, for check.'),
   allowIrreversible: z
     .boolean()
     .optional()
     .default(false)
-    .describe('Must be explicitly true to permit destructive actions (delete, purchase, etc.)'),
+    .describe('Set true only after the user confirms a delete, purchase, payment, or similar action.'),
   bounds: z
     .object({
-      maxSteps: z.number().optional(),
-      timeoutMs: z.number().optional(),
-      allowedOrigins: z.array(z.string()).optional(),
-      allowPrivateNetworks: z.boolean().optional()
+      maxSteps: z.number().int().positive().optional(),
+      timeoutMs: z.number().int().positive().optional(),
+      allowedOrigins: z.array(z.string()).optional().describe('e.g. ["https://example.com", "*.example.org"]')
     })
     .optional()
-    .describe('Resource, security, and step bounds')
-});
+    .describe('Tighten the server limits for this session. Cannot loosen them.')
+};
 
-export async function handleFastpathBrowser(
-  browserProvider: BrowserProvider,
-  args: z.infer<typeof FastpathBrowserSchema>
-): Promise<FastpathBrowserOutput> {
-  const startTime = Date.now();
+export const FastpathBrowserSchema = z.object(FastpathBrowserShape);
+
+type BrowserArgs = z.infer<typeof FastpathBrowserSchema>;
+
+export interface BrowserToolDeps {
+  browser: BrowserProvider;
+  router: CapabilityRouter;
+  config: FastpathServerConfig;
+}
+
+interface CheckResult {
+  satisfied: boolean;
+  confidence: number;
+  status: EvaluationStatus;
+  details: string;
+  pageBytes: number;
+}
+
+export async function handleFastpathBrowser(deps: BrowserToolDeps, args: BrowserArgs): Promise<FastpathBrowserOutput> {
+  const start = Date.now();
   const traceId = LocalEvidenceStore.generateTraceId();
+  const { browser } = deps;
 
-  let sessionId = args.sessionId;
+  const respond = (
+    sessionId: string,
+    body: Omit<FastpathBrowserOutput, 'sessionId' | 'traceId' | 'metrics'>,
+    unseenBytes: number
+  ): FastpathBrowserOutput => {
+    const response = { ...body, sessionId };
+    return {
+      ...response,
+      traceId,
+      metrics: ResultCompactor.computeMetrics({
+        stateBytes: unseenBytes,
+        unseenBytes,
+        response,
+        latencyMs: Date.now() - start,
+        provider: browser.id,
+        decisionPath: body.status === 'escalate' ? 'escalation' : 'browser'
+      })
+    };
+  };
 
-  // 1. OPEN MODE
   if (args.mode === 'open') {
-    if (!args.url) {
-      throw new PolicyBlockedError('URL is required for mode "open"');
+    if (!args.url) throw new PolicyBlockedError('url is required for mode "open"');
+    const sessionId = await browser.createSession({ limits: mergeLimits(deps.config, args.bounds) });
+    try {
+      await browser.navigate(sessionId, args.url);
+    } catch (err) {
+      await browser.closeSession(sessionId);
+      throw err;
     }
-    sessionId = await browserProvider.createSession({ bounds: args.bounds });
-    await browserProvider.navigate(sessionId, args.url);
-    const observation = await browserProvider.observe(sessionId);
-
-    const latencyMs = Date.now() - startTime;
-    return {
+    const observation = await browser.observe(sessionId);
+    return respond(
       sessionId,
-      status: 'accept',
+      { status: 'accept', url: observation.url, observation, reasonCode: 'BROWSER_OPENED_AND_OBSERVED' },
+      observation.rawHtmlBytes ?? 0
+    );
+  }
+
+  const sessionId = args.sessionId;
+  if (!sessionId) throw new PolicyBlockedError(`sessionId is required for mode "${args.mode}"`);
+
+  switch (args.mode) {
+    case 'close': {
+      const existed = Boolean(browser.getSession(sessionId));
+      await browser.closeSession(sessionId);
+      return respond(
+        sessionId,
+        { status: 'accept', url: '', closed: existed, reasonCode: existed ? 'SESSION_CLOSED' : 'SESSION_NOT_FOUND' },
+        0
+      );
+    }
+
+    case 'observe': {
+      const observation = await browser.observe(sessionId);
+      return respond(
+        sessionId,
+        { status: 'accept', url: observation.url, observation, reasonCode: 'BROWSER_OBSERVATION_CAPTURED' },
+        observation.rawHtmlBytes ?? 0
+      );
+    }
+
+    case 'act': {
+      if (!args.action) throw new PolicyBlockedError('action is required for mode "act"');
+      const result = await browser.act(sessionId, args.action, { allowIrreversible: args.allowIrreversible });
+      const observation = await browser.observe(sessionId);
+      return respond(
+        sessionId,
+        {
+          status: 'accept',
+          url: observation.url,
+          observation,
+          outcome: { goalSatisfied: false, confidence: 1, stepCount: 1, actionTaken: result.details },
+          reasonCode: 'ACTION_EXECUTED'
+        },
+        observation.rawHtmlBytes ?? 0
+      );
+    }
+
+    case 'check': {
+      if (!args.assertion) throw new PolicyBlockedError('assertion is required for mode "check"');
+      const check = await checkAssertion(deps, sessionId, args.assertion);
+      return respond(
+        sessionId,
+        {
+          status: check.status,
+          url: browser.getSession(sessionId)?.currentUrl ?? '',
+          outcome: {
+            goalSatisfied: check.satisfied,
+            confidence: check.confidence,
+            stepCount: 0,
+            details: check.details
+          },
+          reasonCode: check.satisfied ? 'ASSERTION_SATISFIED' : 'ASSERTION_NOT_MET'
+        },
+        check.pageBytes
+      );
+    }
+
+    case 'choose': {
+      if (!args.goal) throw new PolicyBlockedError('goal is required for mode "choose"');
+      const observation = await browser.observe(sessionId);
+      const choice = await chooseAction(deps, observation, args.goal, args.allowIrreversible);
+      return respond(
+        sessionId,
+        {
+          status: choice.status,
+          url: observation.url,
+          observation,
+          outcome: {
+            goalSatisfied: false,
+            confidence: choice.confidence,
+            stepCount: 0,
+            actionTaken: choice.action ? describe(choice.action, choice.element) : undefined,
+            details: choice.details
+          },
+          reasonCode: choice.reasonCode
+        },
+        observation.rawHtmlBytes ?? 0
+      );
+    }
+
+    case 'run_bounded':
+      return respondRun(deps, sessionId, args, respond);
+  }
+}
+
+async function respondRun(
+  deps: BrowserToolDeps,
+  sessionId: string,
+  args: BrowserArgs,
+  respond: (id: string, body: Omit<FastpathBrowserOutput, 'sessionId' | 'traceId' | 'metrics'>, unseen: number) => FastpathBrowserOutput
+): Promise<FastpathBrowserOutput> {
+  if (!args.goal) throw new PolicyBlockedError('goal is required for mode "run_bounded"');
+  const maxSteps = Math.min(args.bounds?.maxSteps ?? deps.config.maxBrowserSteps, deps.config.maxBrowserSteps);
+
+  let observation: BrowserObservation | undefined;
+  let unseen = 0;
+  const taken: string[] = [];
+  let finish: { status: EvaluationStatus; reasonCode: string; details: string; satisfied: boolean; confidence: number } | undefined;
+
+  for (let step = 0; step <= maxSteps && !finish; step++) {
+    const check = await checkAssertion(deps, sessionId, args.goal);
+    unseen += check.pageBytes;
+    if (check.satisfied) {
+      finish = { status: 'accept', reasonCode: 'BOUNDED_RUN_SUCCESS', details: check.details, satisfied: true, confidence: check.confidence };
+      break;
+    }
+    if (step === maxSteps) break;
+
+    observation = await deps.browser.observe(sessionId);
+    unseen += observation.rawHtmlBytes ?? 0;
+    // Autonomous runs never take irreversible actions, whatever the caller passed.
+    const choice = await chooseAction(deps, observation, args.goal, false);
+    if (choice.status !== 'accept' || !choice.action) {
+      finish = { status: 'review', reasonCode: choice.reasonCode, details: choice.details, satisfied: false, confidence: choice.confidence };
+      break;
+    }
+    if (choice.action.operation !== 'click') {
+      finish = {
+        status: 'review',
+        reasonCode: 'NEEDS_HOST_INPUT',
+        details: `Next step is ${describe(choice.action, choice.element)}; supply the value with mode "act".`,
+        satisfied: false,
+        confidence: choice.confidence
+      };
+      break;
+    }
+    const result = await deps.browser.act(sessionId, choice.action, { allowIrreversible: false });
+    taken.push(result.details ?? describe(choice.action, choice.element));
+  }
+
+  observation = await deps.browser.observe(sessionId);
+  finish ??= {
+    status: 'review',
+    reasonCode: 'BOUNDED_RUN_LIMIT_REACHED',
+    details: `Goal not confirmed after ${taken.length} step(s).`,
+    satisfied: false,
+    confidence: 0
+  };
+
+  return respond(
+    sessionId,
+    {
+      status: finish.status,
       url: observation.url,
       observation,
-      reasonCode: 'BROWSER_OPENED_AND_OBSERVED',
-      traceId,
-      metrics: {
-        latencyMs,
-        estimatedTokensSaved: 1200,
-        hostTurnsSaved: 1,
-        provider: browserProvider.id,
-        stateBytesEvaluated: Buffer.byteLength(observation.summaryTable, 'utf8'),
-        decisionPath: 'browser'
-      }
-    };
-  }
-
-  // Ensure sessionId exists for other modes
-  if (!sessionId) {
-    throw new PolicyBlockedError(`sessionId is required for mode "${args.mode}"`);
-  }
-
-  // 2. OBSERVE MODE
-  if (args.mode === 'observe') {
-    const observation = await browserProvider.observe(sessionId);
-    const latencyMs = Date.now() - startTime;
-    return {
-      sessionId,
-      status: 'accept',
-      url: observation.url,
-      observation,
-      reasonCode: 'BROWSER_OBSERVATION_CAPTURED',
-      traceId,
-      metrics: {
-        latencyMs,
-        estimatedTokensSaved: 1200,
-        hostTurnsSaved: 1,
-        provider: browserProvider.id,
-        stateBytesEvaluated: Buffer.byteLength(observation.summaryTable, 'utf8'),
-        decisionPath: 'browser'
-      }
-    };
-  }
-
-  // 3. ACT MODE
-  if (args.mode === 'act') {
-    if (!args.action) {
-      throw new PolicyBlockedError('Action object is required for mode "act"');
-    }
-
-    const actionRes = await browserProvider.act(sessionId, args.action);
-    const postObservation = await browserProvider.observe(sessionId);
-    const latencyMs = Date.now() - startTime;
-
-    return {
-      sessionId,
-      status: actionRes.success ? 'accept' : 'error',
-      url: postObservation.url,
-      observation: postObservation,
       outcome: {
-        goalSatisfied: false,
-        confidence: 1.0,
-        stepCount: 1,
-        actionTaken: actionRes.details
+        goalSatisfied: finish.satisfied,
+        confidence: finish.confidence,
+        stepCount: taken.length,
+        actionTaken: taken.join(' -> ') || undefined,
+        details: finish.details
       },
-      reasonCode: actionRes.success ? 'ACTION_EXECUTED' : 'ACTION_FAILED',
-      traceId,
-      metrics: {
-        latencyMs,
-        estimatedTokensSaved: 850,
-        hostTurnsSaved: 1,
-        provider: browserProvider.id,
-        stateBytesEvaluated: Buffer.byteLength(postObservation.summaryTable, 'utf8'),
-        decisionPath: 'browser'
-      }
-    };
+      reasonCode: finish.reasonCode
+    },
+    unseen + (observation.rawHtmlBytes ?? 0)
+  );
+}
+
+/**
+ * Exact phrase match first (fast, certain). If the phrase is not on the page verbatim,
+ * ask the judgment provider whether the page text supports the assertion.
+ */
+async function checkAssertion(deps: BrowserToolDeps, sessionId: string, assertion: string): Promise<CheckResult> {
+  const exact = await deps.browser.checkOutcome(sessionId, assertion);
+  if (exact.satisfied) {
+    return { satisfied: true, confidence: exact.confidence, status: 'accept', details: exact.details ?? '', pageBytes: 0 };
   }
 
-  // 4. CHECK MODE
-  if (args.mode === 'check') {
-    if (!args.assertion) {
-      throw new PolicyBlockedError('Assertion string is required for mode "check"');
-    }
-    const checkRes = await browserProvider.checkOutcome(sessionId, args.assertion);
-    const latencyMs = Date.now() - startTime;
-    const sessionInfo = browserProvider.getSession(sessionId);
+  const text = await deps.browser.readPageText(sessionId, PAGE_TEXT_FOR_JUDGMENT);
+  const info = deps.browser.getSession(sessionId);
+  const res = await deps.router.evaluate({
+    state: `URL: ${info?.currentUrl ?? ''}\n\nPage text:\n${text}`,
+    preset: 'verify_claim',
+    presetParams: { claim: assertion }
+  });
+  const pageBytes = Buffer.byteLength(text, 'utf8');
 
+  if (res.status === 'escalate' || res.status === 'error') {
     return {
-      sessionId,
-      status: checkRes.confidence >= 0.75 ? 'accept' : 'review',
-      url: sessionInfo?.currentUrl || '',
-      outcome: {
-        goalSatisfied: checkRes.satisfied,
-        confidence: checkRes.confidence,
-        stepCount: checkRes.stepsExecuted,
-        details: checkRes.details
-      },
-      reasonCode: checkRes.satisfied ? 'ASSERTION_SATISFIED' : 'ASSERTION_NOT_MET',
-      traceId,
-      metrics: {
-        latencyMs,
-        estimatedTokensSaved: 950,
-        hostTurnsSaved: 1,
-        provider: browserProvider.id,
-        stateBytesEvaluated: 500,
-        decisionPath: 'browser'
-      }
+      satisfied: false,
+      confidence: 0,
+      status: 'review',
+      details: `Phrase not found verbatim and semantic check unavailable (${res.reasonCode}).`,
+      pageBytes
     };
   }
+  const verified = res.decision === true;
+  const verifiedAns = res.answers.is_verified;
+  const confidence = verifiedAns && 'noul' in verifiedAns ? verifiedAns.confidence : res.confidence;
+  return {
+    satisfied: verified,
+    confidence,
+    status: res.status,
+    details: `Semantic check: ${res.reasonCode}.`,
+    pageBytes
+  };
+}
 
-  // 5. CHOOSE MODE
-  if (args.mode === 'choose') {
-    if (!args.goal) {
-      throw new PolicyBlockedError('Goal is required for mode "choose"');
+interface Choice {
+  status: EvaluationStatus;
+  confidence: number;
+  reasonCode: string;
+  details: string;
+  action?: BrowserAction;
+  element?: InteractiveElement;
+}
+
+/** Asks the judgment provider which listed element best advances the goal. */
+async function chooseAction(
+  deps: BrowserToolDeps,
+  observation: BrowserObservation,
+  goal: string,
+  allowIrreversible: boolean
+): Promise<Choice> {
+  const candidates = observation.elements
+    .filter((el) => !el.disabled && (allowIrreversible || !el.isIrreversible))
+    .slice(0, MAX_CHOICE_ELEMENTS);
+  if (candidates.length === 0) {
+    return { status: 'review', confidence: 0, reasonCode: 'NO_ACTIONABLE_ELEMENTS', details: 'No usable elements on the page.' };
+  }
+
+  const criteria: Record<string, string> = { none: 'None of the listed elements advances the goal' };
+  for (const el of candidates) {
+    criteria[`e${el.index}`] = `${(el.role || el.type || el.tagName).toLowerCase()} "${el.label || 'unlabeled'}"`;
+  }
+
+  const res = await deps.router.evaluate({
+    state: `Page: ${observation.title}\nURL: ${observation.url}\n\nInteractive elements:\n${observation.summaryTable}`,
+    questions: {
+      next_element: {
+        type: 'choice',
+        instructions: `Which element should be used next to achieve this goal: "${goal}"?`,
+        criteria
+      }
     }
-    const chosen = await browserProvider.chooseAction(sessionId, args.goal);
-    const latencyMs = Date.now() - startTime;
-    const sessionInfo = browserProvider.getSession(sessionId);
+  });
 
+  const picked = String(res.decision ?? 'none');
+  const element = candidates.find((el) => `e${el.index}` === picked);
+  if (!element || res.status === 'escalate' || res.status === 'error') {
     return {
-      sessionId,
-      status: chosen.confidence >= 0.75 ? 'accept' : 'review',
-      url: sessionInfo?.currentUrl || '',
-      outcome: {
-        goalSatisfied: false,
-        confidence: chosen.confidence,
-        stepCount: 0,
-        actionTaken: `${chosen.action.operation} -> ${chosen.action.targetRef}`
-      },
-      reasonCode: 'ACTION_RECOMMENDED',
-      traceId,
-      metrics: {
-        latencyMs,
-        estimatedTokensSaved: 600,
-        hostTurnsSaved: 1,
-        provider: browserProvider.id,
-        stateBytesEvaluated: 500,
-        decisionPath: 'browser'
-      }
+      status: res.status === 'accept' ? 'review' : res.status,
+      confidence: res.confidence,
+      reasonCode: element ? res.reasonCode : 'NO_ELEMENT_ADVANCES_GOAL',
+      details: res.message ?? 'No confident next step.'
     };
   }
 
-  // 6. RUN_BOUNDED MODE
-  if (args.mode === 'run_bounded') {
-    if (!args.goal) {
-      throw new PolicyBlockedError('Goal is required for mode "run_bounded"');
+  const tag = element.tagName.toLowerCase();
+  const operation: BrowserAction['operation'] =
+    tag === 'select' ? 'select' : tag === 'textarea' || (tag === 'input' && !/^(button|submit|checkbox|radio)$/i.test(element.type ?? '')) ? 'type' : 'click';
+
+  return {
+    status: res.status,
+    confidence: res.confidence,
+    reasonCode: 'ACTION_RECOMMENDED',
+    details: operation === 'click' ? 'Recommended click.' : `Recommended ${operation}; the value must come from the host.`,
+    action: { operation, targetRef: element.ref },
+    element
+  };
+}
+
+function describe(action: BrowserAction, element?: InteractiveElement): string {
+  return `${action.operation} ${element ? `"${element.label}" ` : ''}(${action.targetRef ?? 'page'})`;
+}
+
+/** Caller bounds can only tighten the server limits. */
+export function mergeLimits(config: FastpathServerConfig, bounds?: BrowserArgs['bounds']): SessionLimits {
+  let allowedOrigins = config.allowedOrigins;
+  if (bounds?.allowedOrigins?.length) {
+    if (config.allowedOrigins.length > 0) {
+      const outside = bounds.allowedOrigins.filter((o) => !config.allowedOrigins.includes(o));
+      if (outside.length > 0) {
+        throw new PolicyBlockedError(`Origins outside the server allowlist: ${outside.join(', ')}`);
+      }
     }
-
-    const maxSteps = args.bounds?.maxSteps ?? 3;
-    let currentObs: BrowserObservation | undefined;
-    let stepCount = 0;
-    let goalSatisfied = false;
-
-    for (let step = 1; step <= maxSteps; step++) {
-      stepCount = step;
-      currentObs = await browserProvider.observe(sessionId);
-
-      // Check if goal is already satisfied
-      const check = await browserProvider.checkOutcome(sessionId, args.goal);
-      if (check.satisfied) {
-        goalSatisfied = true;
-        break;
-      }
-
-      // Choose next step
-      const chosen = await browserProvider.chooseAction(sessionId, args.goal);
-      if (chosen.action.operation === 'wait') {
-        break;
-      }
-
-      await browserProvider.act(sessionId, chosen.action);
-    }
-
-    const latencyMs = Date.now() - startTime;
-    return {
-      sessionId,
-      status: goalSatisfied ? 'accept' : 'review',
-      url: currentObs?.url || '',
-      observation: currentObs,
-      outcome: {
-        goalSatisfied,
-        confidence: goalSatisfied ? 0.9 : 0.6,
-        stepCount,
-        details: goalSatisfied
-          ? `Goal satisfied in ${stepCount} bounded steps`
-          : `Reached step limit (${maxSteps}) without complete satisfaction`
-      },
-      reasonCode: goalSatisfied ? 'BOUNDED_RUN_SUCCESS' : 'BOUNDED_RUN_LIMIT_REACHED',
-      traceId,
-      metrics: {
-        latencyMs,
-        estimatedTokensSaved: 2500,
-        hostTurnsSaved: stepCount,
-        provider: browserProvider.id,
-        stateBytesEvaluated: 1500,
-        decisionPath: 'browser'
-      }
-    };
+    allowedOrigins = bounds.allowedOrigins;
   }
-
-  throw new PolicyBlockedError(`Unsupported browser mode: ${args.mode}`);
+  return {
+    maxSteps: Math.min(bounds?.maxSteps ?? config.maxBrowserSteps, config.maxBrowserSteps),
+    timeoutMs: Math.min(bounds?.timeoutMs ?? config.browserTimeoutMs, config.browserTimeoutMs),
+    allowedOrigins,
+    allowPrivateNetworks: config.allowPrivateNetworks
+  };
 }

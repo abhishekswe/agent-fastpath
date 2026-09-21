@@ -1,5 +1,6 @@
 /**
- * Deterministic Mock TypeSafe Provider for offline testing, benchmarks, and CI.
+ * Deterministic mock provider for tests and benchmarks. Its answers come from keyword
+ * heuristics, not a model, so it is never selected automatically.
  */
 
 import {
@@ -11,6 +12,8 @@ import {
 
 export class MockTypeSafeProvider implements JudgmentProvider {
   public readonly id = 'typesafe:mock';
+  public readonly available = true;
+  public readonly model = 'mock-jev-v1';
 
   public async evaluate(request: JudgmentRequest): Promise<JudgmentResult> {
     const startTime = Date.now();
@@ -77,7 +80,7 @@ export class MockTypeSafeProvider implements JudgmentProvider {
         answers[key] = {
           noul: pYes,
           answer: pYes >= 0.5,
-          confidence: Math.round(Math.abs(pYes - 0.5) * 2 * 100) / 100
+          confidence: Math.max(pYes, 1 - pYes)
         };
       }
     }
