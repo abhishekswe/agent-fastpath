@@ -12,6 +12,7 @@ import {
   BrowserObservation,
   BrowserProvider,
   CapabilityRouter,
+  defaultEvidenceStore,
   EvaluationStatus,
   FastpathBrowserOutput,
   FastpathServerConfig,
@@ -24,6 +25,10 @@ import {
 
 const PAGE_TEXT_FOR_JUDGMENT = 6000;
 const MAX_CHOICE_ELEMENTS = 40;
+
+function estimateObservationBytes(obs: BrowserObservation): number {
+  return Buffer.byteLength(obs.summaryTable, 'utf8') + Buffer.byteLength(JSON.stringify(obs.elements), 'utf8');
+}
 
 export const FastpathBrowserShape = {
   mode: z
@@ -84,23 +89,46 @@ export async function handleFastpathBrowser(deps: BrowserToolDeps, args: Browser
   const traceId = LocalEvidenceStore.generateTraceId();
   const { browser } = deps;
 
-  const respond = (
+  const respond = async (
     sessionId: string,
     body: Omit<FastpathBrowserOutput, 'sessionId' | 'traceId' | 'metrics'>,
     unseenBytes: number
-  ): FastpathBrowserOutput => {
+  ): Promise<FastpathBrowserOutput> => {
     const response = { ...body, sessionId };
+    const metrics = ResultCompactor.computeMetrics({
+      stateBytes: unseenBytes,
+      unseenBytes,
+      response,
+      latencyMs: Date.now() - start,
+      provider: browser.id,
+      decisionPath: body.status === 'escalate' ? 'escalation' : 'browser'
+    });
+
+    await defaultEvidenceStore.saveTrace({
+      traceId,
+      timestamp: new Date().toISOString(),
+      tool: 'fastpath_browser',
+      status: body.status,
+      decisionPath: metrics.decisionPath,
+      stateSummary: `Browser mode: ${args.mode} on ${body.url || 'session ' + sessionId}`,
+      latencyBreakdownMs: { totalMs: Date.now() - start },
+      redactionsApplied: [],
+      diagnostics: {
+        sessionId,
+        mode: args.mode,
+        url: body.url,
+        action: args.action,
+        goal: args.goal,
+        assertion: args.assertion,
+        reasonCode: body.reasonCode
+      },
+      estimatedTokensSaved: metrics.estimatedTokensSaved
+    });
+
     return {
       ...response,
       traceId,
-      metrics: ResultCompactor.computeMetrics({
-        stateBytes: unseenBytes,
-        unseenBytes,
-        response,
-        latencyMs: Date.now() - start,
-        provider: browser.id,
-        decisionPath: body.status === 'escalate' ? 'escalation' : 'browser'
-      })
+      metrics
     };
   };
 
@@ -114,10 +142,10 @@ export async function handleFastpathBrowser(deps: BrowserToolDeps, args: Browser
       throw err;
     }
     const observation = await browser.observe(sessionId);
-    return respond(
+    return await respond(
       sessionId,
       { status: 'accept', url: observation.url, observation, reasonCode: 'BROWSER_OPENED_AND_OBSERVED' },
-      observation.rawHtmlBytes ?? 0
+      estimateObservationBytes(observation)
     );
   }
 
@@ -128,7 +156,7 @@ export async function handleFastpathBrowser(deps: BrowserToolDeps, args: Browser
     case 'close': {
       const existed = Boolean(browser.getSession(sessionId));
       await browser.closeSession(sessionId);
-      return respond(
+      return await respond(
         sessionId,
         { status: 'accept', url: '', closed: existed, reasonCode: existed ? 'SESSION_CLOSED' : 'SESSION_NOT_FOUND' },
         0
@@ -137,10 +165,10 @@ export async function handleFastpathBrowser(deps: BrowserToolDeps, args: Browser
 
     case 'observe': {
       const observation = await browser.observe(sessionId);
-      return respond(
+      return await respond(
         sessionId,
         { status: 'accept', url: observation.url, observation, reasonCode: 'BROWSER_OBSERVATION_CAPTURED' },
-        observation.rawHtmlBytes ?? 0
+        estimateObservationBytes(observation)
       );
     }
 
@@ -148,7 +176,7 @@ export async function handleFastpathBrowser(deps: BrowserToolDeps, args: Browser
       if (!args.action) throw new PolicyBlockedError('action is required for mode "act"');
       const result = await browser.act(sessionId, args.action, { allowIrreversible: args.allowIrreversible });
       const observation = await browser.observe(sessionId);
-      return respond(
+      return await respond(
         sessionId,
         {
           status: 'accept',
@@ -157,14 +185,14 @@ export async function handleFastpathBrowser(deps: BrowserToolDeps, args: Browser
           outcome: { goalSatisfied: false, confidence: 1, stepCount: 1, actionTaken: result.details },
           reasonCode: 'ACTION_EXECUTED'
         },
-        observation.rawHtmlBytes ?? 0
+        estimateObservationBytes(observation)
       );
     }
 
     case 'check': {
       if (!args.assertion) throw new PolicyBlockedError('assertion is required for mode "check"');
       const check = await checkAssertion(deps, sessionId, args.assertion);
-      return respond(
+      return await respond(
         sessionId,
         {
           status: check.status,
@@ -185,7 +213,7 @@ export async function handleFastpathBrowser(deps: BrowserToolDeps, args: Browser
       if (!args.goal) throw new PolicyBlockedError('goal is required for mode "choose"');
       const observation = await browser.observe(sessionId);
       const choice = await chooseAction(deps, observation, args.goal, args.allowIrreversible);
-      return respond(
+      return await respond(
         sessionId,
         {
           status: choice.status,
@@ -200,12 +228,12 @@ export async function handleFastpathBrowser(deps: BrowserToolDeps, args: Browser
           },
           reasonCode: choice.reasonCode
         },
-        observation.rawHtmlBytes ?? 0
+        estimateObservationBytes(observation)
       );
     }
 
     case 'run_bounded':
-      return respondRun(deps, sessionId, args, respond);
+      return await respondRun(deps, sessionId, args, respond);
   }
 }
 
@@ -213,7 +241,7 @@ async function respondRun(
   deps: BrowserToolDeps,
   sessionId: string,
   args: BrowserArgs,
-  respond: (id: string, body: Omit<FastpathBrowserOutput, 'sessionId' | 'traceId' | 'metrics'>, unseen: number) => FastpathBrowserOutput
+  respond: (id: string, body: Omit<FastpathBrowserOutput, 'sessionId' | 'traceId' | 'metrics'>, unseen: number) => Promise<FastpathBrowserOutput>
 ): Promise<FastpathBrowserOutput> {
   if (!args.goal) throw new PolicyBlockedError('goal is required for mode "run_bounded"');
   const maxSteps = Math.min(args.bounds?.maxSteps ?? deps.config.maxBrowserSteps, deps.config.maxBrowserSteps);
@@ -233,7 +261,7 @@ async function respondRun(
     if (step === maxSteps) break;
 
     observation = await deps.browser.observe(sessionId);
-    unseen += observation.rawHtmlBytes ?? 0;
+    unseen += estimateObservationBytes(observation);
     // Autonomous runs never take irreversible actions, whatever the caller passed.
     const choice = await chooseAction(deps, observation, args.goal, false);
     if (choice.status !== 'accept' || !choice.action) {
@@ -263,7 +291,7 @@ async function respondRun(
     confidence: 0
   };
 
-  return respond(
+  return await respond(
     sessionId,
     {
       status: finish.status,
@@ -278,7 +306,7 @@ async function respondRun(
       },
       reasonCode: finish.reasonCode
     },
-    unseen + (observation.rawHtmlBytes ?? 0)
+    unseen + estimateObservationBytes(observation)
   );
 }
 
@@ -311,12 +339,20 @@ async function checkAssertion(deps: BrowserToolDeps, sessionId: string, assertio
     };
   }
   const verified = res.decision === true;
-  const verifiedAns = res.answers.is_verified;
-  const confidence = verifiedAns && 'noul' in verifiedAns ? verifiedAns.confidence : res.confidence;
+  const verifiedAns = res.answers.verification_status ?? res.answers.is_verified;
+  const confidence = verifiedAns && 'choice' in verifiedAns
+    ? res.confidence
+    : verifiedAns && 'noul' in verifiedAns
+      ? verifiedAns.confidence
+      : res.confidence;
+  const status: EvaluationStatus = (!verified && (res.reasonCode === 'EVIDENCE_INCONCLUSIVE' || res.status === 'escalate'))
+    ? 'review'
+    : res.status;
+
   return {
     satisfied: verified,
     confidence,
-    status: res.status,
+    status,
     details: `Semantic check: ${res.reasonCode}.`,
     pageBytes
   };

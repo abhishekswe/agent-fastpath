@@ -61,13 +61,30 @@ export class CapabilityRouter {
     const det = DeterministicEngine.evaluateExact(prepared.sanitized, input.preset, input.presetParams);
     if (det.handled) {
       const threshold = prepared.policy.confidenceThreshold ?? EscalationGate.DEFAULT_CONFIDENCE_THRESHOLD;
+      const isBlocked = det.decision === 'BLOCKED';
+      const isRisk = det.decision === 'HIGH_RISK';
+      const status: EvaluationStatus = isBlocked
+        ? 'blocked'
+        : isRisk
+          ? 'review'
+          : det.confidence >= threshold
+            ? 'accept'
+            : 'review';
+      const recommendedAction = isBlocked
+        ? 'fix_and_retry'
+        : isRisk
+          ? 'ask_user'
+          : det.confidence >= threshold
+            ? 'proceed'
+            : 'inspect_evidence';
+
       return this.finish(prepared, {
-        status: det.confidence >= threshold ? 'accept' : 'review',
+        status,
         decision: det.decision,
         confidence: det.confidence,
         answers: {},
         reasonCode: det.reasonCode,
-        recommendedAction: det.confidence >= threshold ? 'proceed' : 'inspect_evidence'
+        recommendedAction
       }, 'deterministic', 'deterministic', { deterministic: det.details });
     }
 
@@ -238,6 +255,33 @@ function combine(
       decision,
       reasonCode: synthesized.reasonCode,
       recommendedAction: 'ask_user'
+    };
+  }
+
+  if (decision === 'BLOCKED') {
+    return {
+      status: 'blocked' as EvaluationStatus,
+      decision,
+      reasonCode: synthesized?.reasonCode ?? gate.reasonCode,
+      recommendedAction: 'fix_and_retry'
+    };
+  }
+
+  if (decision === 'HIGH_RISK') {
+    return {
+      status: 'review' as EvaluationStatus,
+      decision,
+      reasonCode: synthesized?.reasonCode ?? gate.reasonCode,
+      recommendedAction: 'ask_user'
+    };
+  }
+
+  if (decision === 'NEEDS_REVIEW' && gate.status === 'accept') {
+    return {
+      status: 'review' as EvaluationStatus,
+      decision,
+      reasonCode: synthesized?.reasonCode ?? gate.reasonCode,
+      recommendedAction: 'inspect_evidence'
     };
   }
 

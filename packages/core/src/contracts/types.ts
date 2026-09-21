@@ -110,7 +110,7 @@ export interface FastpathEvaluateOutput {
   margin?: number;
   answers: Record<string, TypedAnswer>;
   reasonCode: string;
-  recommendedAction?: 'proceed' | 'inspect_evidence' | 'ask_user' | 'fallback_large_model';
+  recommendedAction?: 'proceed' | 'inspect_evidence' | 'ask_user' | 'fallback_large_model' | 'fix_and_retry';
   /** Human-readable detail for errors and escalations. */
   message?: string;
   traceId: string;

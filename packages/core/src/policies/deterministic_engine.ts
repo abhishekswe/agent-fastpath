@@ -27,21 +27,28 @@ export class DeterministicEngine {
   ): DeterministicEvaluationResult {
     const rawText = typeof state === 'string' ? state : JSON.stringify(state);
 
-    // 1. Ship gate: decide from CI output when it is unambiguous. Any failure
-    //    signal wins over a pass signal, so "64 passed" plus "Lint: FAILED" blocks.
+    // 1. Ship gate: decide from CI output when it is unambiguous.
     if (preset === 'ship_gate') {
+      const hasDiff = /\b(?:diff --git|@@ -\d+,\d+ \+\d+,\d+ @@|\bindex [0-9a-f]{7,}\.\.[0-9a-f]{7,})\b/.test(rawText);
       const failure = SHIP_GATE_FAILURE_PATTERNS.find((p) => p.test(rawText));
-      if (failure) {
-        return {
-          handled: true,
-          decision: 'BLOCKED',
-          confidence: 1.0,
-          reasonCode: 'DETERMINISTIC_TEST_FAILURE_DETECTED',
-          details: { matchedPattern: failure.toString() }
-        };
-      }
       const pass = SHIP_GATE_PASS_PATTERNS.find((p) => p.test(rawText));
-      if (pass) {
+
+      if (failure) {
+        const isTestCountFailure = /\b(?:test result:\s*FAILED|Tests:\s+[1-9]\d*\s+failed|[1-9]\d*\s+failed,\s*\d+\s+passed|[1-9]\d*\s+failing)\b/i.test(rawText);
+        const hasExplicitZeroFailed = /\b(?:0 failed|failed:\s*0)\b/i.test(rawText);
+
+        if (!(isTestCountFailure && hasExplicitZeroFailed)) {
+          return {
+            handled: true,
+            decision: 'BLOCKED',
+            confidence: 1.0,
+            reasonCode: 'DETERMINISTIC_TEST_FAILURE_DETECTED',
+            details: { matchedPattern: failure.toString() }
+          };
+        }
+      }
+
+      if (pass && !failure && !hasDiff) {
         return {
           handled: true,
           decision: 'READY_TO_SHIP',
@@ -179,7 +186,10 @@ const SHIP_GATE_FAILURE_PATTERNS: RegExp[] = [
   /BUILD FAILED/i,
   /ERR! test failed/i,
   /\bFAIL\s+[\w\-./]+\.(?:test|spec)\./,
-  /\b[1-9]\d*\s+(?:failed|failing|errors?)\b/i,
+  /\btest result:\s*FAILED\b/i,
+  /Tests:\s+[1-9]\d*\s+failed\b/i,
+  /\b[1-9]\d*\s+failed,\s*\d+\s+passed\b/i,
+  /\b[1-9]\d*\s+failing\b/i,
   /\b(?:build|lint|typecheck|type-check|tests?|ci|compile)\s*:\s*(?:failed|failure|error|errored)\b/i
 ];
 

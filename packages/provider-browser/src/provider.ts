@@ -184,8 +184,10 @@ export class PlaywrightBrowserProvider implements BrowserProvider {
 
   public async readPageText(sessionId: string, maxChars: number): Promise<string> {
     const session = this.require(sessionId);
+    const title = await session.page.title().catch(() => '');
     const text = await session.page.innerText('body').catch(() => '');
-    return text.replace(/\s+/g, ' ').trim().slice(0, maxChars);
+    const combined = title ? `Title: ${title}\nBody: ${text}` : text;
+    return combined.replace(/\s+/g, ' ').trim().slice(0, maxChars);
   }
 
   public async checkHealth(): Promise<{ healthy: boolean; latencyMs: number; error?: string }> {

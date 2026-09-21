@@ -44,6 +44,10 @@ test('open returns a compact element table with observation-bound refs', async (
   assert.deepEqual(labels, ['More information', 'Delete project', 'Search docs']);
   assert.ok(res.observation.elements.every((e: any) => e.ref.startsWith(`${res.observation.observationId}:`)));
   assert.ok(res.metrics.estimatedTokensSaved >= 0);
+  const evidence = await open.call('fastpath_evidence', { traceId: res.traceId });
+  assert.equal(evidence.traceId, res.traceId);
+  assert.equal(evidence.tool, 'fastpath_browser');
+  assert.equal(evidence.status, 'accept');
   await open.call('fastpath_browser', { mode: 'close', sessionId: res.sessionId });
 });
 

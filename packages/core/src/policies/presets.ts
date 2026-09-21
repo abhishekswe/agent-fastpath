@@ -113,11 +113,11 @@ export const PRESET_REGISTRY: Record<string, PresetDefinition> = {
         },
         evidence_sufficiency: {
           type: 'choice',
-          instructions: 'Is the provided evidence sufficient to verify or falsify the claim?',
+          instructions: `Regarding the claim "${claim}", what does the provided evidence conclude?`,
           criteria: {
-            sufficient: 'Evidence is conclusive and complete',
-            inconclusive: 'Evidence is partial or ambiguous',
-            contradicted: 'Evidence actively contradicts the claim'
+            sufficient: `Evidence is complete and conclusively proves: "${claim}"`,
+            inconclusive: `Evidence is partial, ambiguous, or insufficient to evaluate: "${claim}"`,
+            contradicted: `Evidence actively disproves or contradicts: "${claim}"`
           }
         }
       };
@@ -128,10 +128,10 @@ export const PRESET_REGISTRY: Record<string, PresetDefinition> = {
       if (sufficiency === 'sufficient' && verified) {
         return { decision: true, reasonCode: 'CLAIM_VERIFIED' };
       }
-      if (sufficiency === 'contradicted') {
+      if (sufficiency === 'contradicted' || (answers.is_verified?.noul !== undefined && answers.is_verified.noul < 0.25)) {
         return { decision: false, reasonCode: 'CLAIM_CONTRADICTED' };
       }
-      return { decision: false, reasonCode: 'EVIDENCE_INCONCLUSIVE' };
+      return { decision: false, reasonCode: 'EVIDENCE_INCONCLUSIVE', escalate: true };
     }
   },
 

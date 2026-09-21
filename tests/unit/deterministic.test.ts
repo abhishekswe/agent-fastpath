@@ -23,6 +23,39 @@ test('ship_gate: clean runs pass deterministically', () => {
   }
 });
 
+test('ship_gate: FP1 benign phrases do not trigger false BLOCKED', () => {
+  const benign = [
+    'Returns 401 error when auth header is missing',
+    'Retries up to 3 errors before timing out',
+    'Handles HTTP 500 errors gracefully',
+    'Locks account after 2 failed login attempts'
+  ];
+  for (const text of benign) {
+    const res = DeterministicEngine.evaluateExact(text, 'ship_gate');
+    assert.equal(res.handled, false, `Should not be handled deterministically: ${text}`);
+  }
+});
+
+test('ship_gate: FP6 diff presence falls through to semantic review even with green test summary', () => {
+  const diffWithPassingTests = `
+diff --git a/src/auth.ts b/src/auth.ts
+--- a/src/auth.ts
++++ b/src/auth.ts
+@@ -10,2 +10,2 @@
+-  if (!session) throw new UnauthorizedError();
++  // bypassed auth
+Tests: 214 passed, 0 failed
+`;
+  const res = DeterministicEngine.evaluateExact(diffWithPassingTests, 'ship_gate');
+  assert.equal(res.handled, false, 'Should fall through to semantic evaluation when diff is present');
+});
+
+test('ship_gate: TDD red-to-green narrative falls through to semantic evaluation', () => {
+  const narrative = 'Red phase: Tests: 1 failed. Green phase after fix: Tests: 5 passed, 0 failed';
+  const res = DeterministicEngine.evaluateExact(narrative, 'ship_gate');
+  assert.equal(res.handled, false, 'Should fall through to semantic evaluation when both fail and 0-failed are present');
+});
+
 test('risk: destructive commands are flagged without a model', () => {
   for (const cmd of ['rm -rf /', 'git push origin main --force', 'DROP TABLE users;', 'git reset --hard HEAD~3']) {
     assert.equal(DeterministicEngine.evaluateExact(cmd, 'risk').decision, 'HIGH_RISK', cmd);
