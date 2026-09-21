@@ -1,111 +1,92 @@
-# ⚡ agentctl-fastpath
+# agentctl-fastpath
 
-> **Local-first MCP acceleration layer for AI coding agents (Claude Code, Codex, Cursor, OpenCode). Fast, typed decisions, bounded triage, and token-efficient browser operations powered by deterministic logic and TypeSafe System One (Jev).**
+An MCP server that takes small, well-defined judgment calls off your coding agent's plate: is this CI log ready to ship, which of these 40 files handle auth, did the page actually say "Order confirmed". It answers with typed, calibrated results in milliseconds to a couple of seconds, and hands control back when it is not sure.
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![TypeScript: 5.7+](https://img.shields.io/badge/TypeScript-5.7+-3178C6.svg)](https://www.typescriptlang.org/)
-[![Node: 20+](https://img.shields.io/badge/Node-20+-228B22.svg)](https://nodejs.org/)
-[![Powered by: TypeSafe Jev](https://img.shields.io/badge/Powered%20by-TypeSafe%20Jev-black)](https://typesafe.ai)
+Works with Claude Code, Cursor, Codex, and any MCP client.
 
----
+## Tools
 
-## 🎯 Purpose
+| Tool | What it does |
+| --- | --- |
+| `fastpath_evaluate` | Answers typed questions about text: a choice, a score, or a yes/no probability. Presets cover common cases (`ship_gate`, `risk`, `severity`, `ambiguity`, `relevance`, `verify_claim`, and more). |
+| `fastpath_triage` | Ranks files by relevance to a query. The server reads the files, so they never enter your agent's context. |
+| `fastpath_browser` | Drives a headless browser one step at a time and returns a short element table instead of screenshots or HTML. |
+| `fastpath_evidence` | Explains a previous result: questions asked, full distributions, gate decision. |
+| `fastpath_capabilities` | Shows the active provider, limits, and security settings. |
 
-Host AI coding agents (like Claude Code, Codex, and Cursor) often consume tens of thousands of tokens and multiple seconds of latency attempting to parse raw logs, scan entire directory trees, and inspect full web accessibility trees.
+Every result has a `status`:
 
-`agentctl-fastpath` sits between the host agent and local/web resources as a **local MCP acceleration server**. It is **not** an autonomous agent—it remains completely idle until called, executing bounded operations and returning compact, typed JSON with calibrated probabilities and tokens-saved metrics.
+- `accept`: confident, act on it.
+- `review`: plausible, check the evidence first.
+- `escalate`: not confident, or the input needs a human (for example, contradictory requirements). Decide yourself or ask the user.
 
-### Core Architectural Hierarchy
-1. **Deterministic Logic First**: Ordinary TypeScript code handles schema validation, parsing, exact string/regex matches, test failure detection, and secret redaction in <1ms without calling remote models.
-2. **TypeSafe System One (Jev) Second**: When semantic judgment is required, multi-question speculative queries execute in a single network pass, returning typed answers (choice, score, noul) and calibrated distributions.
-3. **Bounded Browser Provider Third**: Performs atomic page observations with cryptographic observation tokens (`obs_<uuid>:<index>`), rejecting stale targets, blocking SSRF, and requiring confirmation for destructive actions.
-4. **Escalation Gate Fourth**: If confidence is below threshold (<0.75) or answers are ambiguous, control is immediately returned to the host agent with reason codes.
+## Install
 
----
+Requires Node 20.12+ and a [TypeSafe](https://typesafe.ai) API key.
 
-## 🛠️ MCP Tools Exposed
-
-`agentctl-fastpath` exposes exactly 5 compact tools:
-
-1. **`fastpath_evaluate`**: Run fast typed semantic evaluation (choice/score/noul or presets like `ship_gate`, `relevance`, `risk`, `severity`, `intent`) over state without conversational prose.
-2. **`fastpath_triage`**: Rank or filter files or items against a query without putting all full contents into the host LLM context.
-3. **`fastpath_browser`**: Perform bounded browser operations (`open`, `observe`, `act`, `check`, `choose`, `run_bounded`) with atomic observation token validation.
-4. **`fastpath_evidence`**: Retrieve expanded evidence, question breakdowns, and raw probability distributions for a previous `traceId`.
-5. **`fastpath_capabilities`**: Report active providers, limits, presets, and security settings without exposing secrets.
-
----
-
-## 🚀 Quick Start
-
-### 1. Installation & Environment Check
 ```bash
-# Clone or navigate to the repository
-cd scratch/agentctl-fastpath
-
-# Install dependencies and build
-npm install
-npm run build
-
-# Run environment verification doctor
-npm run doctor
+claude mcp add agentctl-fastpath -s user -e TYPESAFE_API_KEY=<key> -- npx -y agentctl-fastpath start
+npx playwright install chromium   # only needed for the browser tool
 ```
 
-### 2. Configure Your Client
+For Cursor, Codex, and all settings, see [configuration](docs/configuration.md). Check your setup with `npx agentctl-fastpath doctor`.
 
-#### Claude Code:
-```bash
-claude mcp add agentctl-fastpath -- npx -y agentctl-fastpath start
-```
+Without an API key the server still runs: deterministic checks work, and semantic questions return `escalate` instead of guessing.
 
-#### Cursor (`~/.cursor/mcp.json`):
+## Example
+
 ```json
 {
-  "mcpServers": {
-    "agentctl-fastpath": {
-      "command": "npx",
-      "args": ["-y", "agentctl-fastpath", "start"],
-      "env": {
-        "TYPESAFE_API_KEY": "your_api_key_here"
-      }
-    }
+  "tool": "fastpath_evaluate",
+  "arguments": {
+    "preset": "ambiguity",
+    "state": "Update the user record immediately, but defer all database writes until midnight."
   }
 }
 ```
 
----
+```json
+{
+  "status": "escalate",
+  "decision": true,
+  "reasonCode": "AMBIGUITY_DETECTED",
+  "recommendedAction": "ask_user",
+  "answers": {
+    "is_ambiguous": { "noul": 0.85, "answer": true, "confidence": 0.85 },
+    "ambiguity_type": { "choice": "contradictory", "confidence": 0.9, "probabilities": { "contradictory": 0.93, "underspecified": 0.06, "missing_context": 0.01, "none": 0 } }
+  },
+  "traceId": "trc_6ae27274499cf7e7"
+}
+```
 
-## 🧪 Verification & Benchmarks
+## How it decides
 
-Run the complete automated test suite (unit, contract, security, and e2e integration):
+1. **Rules first.** Clear-cut cases are answered by code in under a millisecond: a failing test run blocks `ship_gate`, `git push --force` is `HIGH_RISK`.
+2. **Then a fast model.** Everything else goes to TypeSafe System One in a single request.
+3. **Then a confidence gate.** Low confidence or near-tied options return `review` or `escalate` instead of an answer.
+
+More in [architecture](docs/architecture.md).
+
+## Safety
+
+- The browser cannot reach localhost, private networks, or cloud metadata endpoints. Every connection, including redirects and page scripts, goes through a checking proxy.
+- Clicking anything labelled like delete, buy, pay, or publish requires `allowIrreversible: true`.
+- Triage reads only inside the directories you allow.
+- Secrets are redacted before anything leaves the machine.
+- Tool callers can tighten these limits but not loosen them.
+
+Details and known limits: [security](docs/security.md).
+
+## Development
+
 ```bash
-npm test
+npm install
+npx playwright install chromium
+npm run check        # typecheck, tests, build, and a smoke test of the built CLI
+npm run test:live    # the full scenario suite against the real API (needs TYPESAFE_API_KEY)
+npm run bench        # context and latency benchmark (needs TYPESAFE_API_KEY)
 ```
 
-Run the token reduction benchmark harness:
-```bash
-npm run bench
-```
+## License
 
-Sample Benchmark Output:
-```
-┌─────────┬───────────────────────────────┬────────────┬─────────────────┬─────────────┬──────────────┬────────┐
-│ (index) │ Scenario                      │ Raw Tokens │ Fastpath Tokens │ Reduction % │ Latency (ms) │ Passed │
-├─────────┼───────────────────────────────┼────────────┼─────────────────┼─────────────┼──────────────┼────────┤
-│ 0       │ 'Repository File Triage'      │ 651        │ 116             │ '82%'       │ 1            │ true   │
-│ 1       │ 'CI Verification & Ship Gate' │ 160        │ 87              │ '46%'       │ 0            │ true   │
-└─────────┴───────────────────────────────┴────────────┴─────────────────┴─────────────┴──────────────┴────────┘
-```
-
----
-
-## 📚 Documentation
-- [Architecture & Design Decisions](docs/architecture.md)
-- [Security Model & STRIDE Analysis](docs/security.md)
-- [Pluggable Provider Guide](docs/providers.md)
-- [Benchmark Methodology](docs/benchmarking.md)
-- [Client Configuration](docs/mcp-clients.md)
-
----
-
-## 📄 License
-MIT © 2026 agentctl contributors.
+MIT
