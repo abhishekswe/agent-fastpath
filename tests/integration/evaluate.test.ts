@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { MockTypeSafeProvider, UnavailableJudgmentProvider } from '@agentctl/provider-typesafe';
+import { MockTypeSafeProvider, UnavailableJudgmentProvider } from '@agent-fastpath/provider-typesafe';
 import { connect, ScriptedProvider } from '../helpers.js';
 
 test('lists exactly the five fastpath tools', async () => {

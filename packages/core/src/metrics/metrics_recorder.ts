@@ -1,5 +1,5 @@
 /**
- * Metrics Recorder and aggregator for agentctl-fastpath.
+ * Metrics Recorder and aggregator for agent-fastpath.
  */
 
 import { MetricsEvent, MetricsSink } from '../contracts/provider.js';

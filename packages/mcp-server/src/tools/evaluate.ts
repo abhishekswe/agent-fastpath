@@ -8,7 +8,7 @@ import {
   FastpathEvaluateInput,
   FastpathEvaluateOutput,
   PRESET_REGISTRY
-} from '@agentctl/core';
+} from '@agent-fastpath/core';
 
 const PRESET_NAMES = Object.keys(PRESET_REGISTRY) as [string, ...string[]];
 

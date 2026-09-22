@@ -1,5 +1,5 @@
 /**
- * Transport-independent MCP server for agentctl-fastpath.
+ * Transport-independent MCP server for agent-fastpath.
  */
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
@@ -12,13 +12,13 @@ import {
   JudgmentProvider,
   effectiveRoots,
   resolveServerConfig
-} from '@agentctl/core';
+} from '@agent-fastpath/core';
 import {
   MockTypeSafeProvider,
   TypeSafeJudgmentProvider,
   UnavailableJudgmentProvider
-} from '@agentctl/provider-typesafe';
-import { PlaywrightBrowserProvider } from '@agentctl/provider-browser';
+} from '@agent-fastpath/provider-typesafe';
+import { PlaywrightBrowserProvider } from '@agent-fastpath/provider-browser';
 
 import { FastpathEvaluateShape, handleFastpathEvaluate } from './tools/evaluate.js';
 import { FastpathTriageShape, handleFastpathTriage } from './tools/triage.js';
@@ -62,7 +62,7 @@ export class FastpathMcpServer {
       maxStateSizeBytes: this.config.maxStateSizeBytes
     });
 
-    this.server = new McpServer({ name: 'agentctl-fastpath', version: VERSION }, { capabilities: { tools: {} } });
+    this.server = new McpServer({ name: 'agent-fastpath', version: VERSION }, { capabilities: { tools: {} } });
     this.registerTools();
   }
 

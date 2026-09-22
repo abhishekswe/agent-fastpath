@@ -5,7 +5,7 @@
 
 import { test, after, before } from 'node:test';
 import assert from 'node:assert/strict';
-import { MockTypeSafeProvider } from '@agentctl/provider-typesafe';
+import { MockTypeSafeProvider } from '@agent-fastpath/provider-typesafe';
 import { connect, Connected, Fixture, ScriptedProvider, startFixture } from '../helpers.js';
 
 const HOME = `<!doctype html><html><head><title>Fixture Home</title></head><body>

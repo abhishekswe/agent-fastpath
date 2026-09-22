@@ -1,5 +1,5 @@
 /**
- * @agentctl/mcp-server exports
+ * @agent-fastpath/mcp-server exports
  */
 
 export * from './server.js';

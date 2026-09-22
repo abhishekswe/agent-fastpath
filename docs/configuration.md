@@ -2,12 +2,12 @@
 
 ## Clients
 
-The server speaks MCP over stdio. Every client needs the same three things: the command `npx`, the arguments `-y agentctl-fastpath start`, and `TYPESAFE_API_KEY` in the environment.
+The server speaks MCP over stdio. Every client needs the same three things: the command `npx`, the arguments `-y agent-fastpath start`, and `TYPESAFE_API_KEY` in the environment.
 
 **Claude Code**
 
 ```bash
-claude mcp add agentctl-fastpath -s user -e TYPESAFE_API_KEY=<key> -- npx -y agentctl-fastpath start
+claude mcp add agent-fastpath -s user -e TYPESAFE_API_KEY=<key> -- npx -y agent-fastpath start
 ```
 
 `-s user` makes it available in every project. Without it the server is only registered for the directory you ran the command in.
@@ -17,9 +17,9 @@ claude mcp add agentctl-fastpath -s user -e TYPESAFE_API_KEY=<key> -- npx -y age
 ```json
 {
   "mcpServers": {
-    "agentctl-fastpath": {
+    "agent-fastpath": {
       "command": "npx",
-      "args": ["-y", "agentctl-fastpath", "start"],
+      "args": ["-y", "agent-fastpath", "start"],
       "env": { "TYPESAFE_API_KEY": "<key>" }
     }
   }
@@ -29,13 +29,13 @@ claude mcp add agentctl-fastpath -s user -e TYPESAFE_API_KEY=<key> -- npx -y age
 **Codex** (`~/.codex/config.toml`)
 
 ```toml
-[mcp_servers.agentctl-fastpath]
+[mcp_servers.agent-fastpath]
 command = "npx"
-args = ["-y", "agentctl-fastpath", "start"]
+args = ["-y", "agent-fastpath", "start"]
 env = { TYPESAFE_API_KEY = "<key>" }
 ```
 
-`npx agentctl-fastpath install-config <client>` prints these snippets.
+`npx agent-fastpath install-config <client>` prints these snippets.
 
 ## Environment variables
 
@@ -62,4 +62,4 @@ The browser tool needs Chromium:
 npx playwright install chromium
 ```
 
-`npx agentctl-fastpath doctor` checks Node, the API key, and the browser.
+`npx agent-fastpath doctor` checks Node, the API key, and the browser.

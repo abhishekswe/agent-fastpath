@@ -1,5 +1,5 @@
 /**
- * @agentctl/provider-typesafe exports
+ * @agent-fastpath/provider-typesafe exports
  */
 
 export * from './client.js';

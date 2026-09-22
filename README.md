@@ -1,4 +1,6 @@
-# agentctl-fastpath
+# agent-fastpath
+
+Formerly published as agentctl-fastpath.
 
 An MCP server that takes small, well-defined judgment calls off your coding agent's plate: is this CI log ready to ship, which of these 40 files handle auth, did the page actually say "Order confirmed". It answers with typed, calibrated results in milliseconds to a couple of seconds, and hands control back when it is not sure.
 
@@ -25,11 +27,11 @@ Every result has a `status`:
 Requires Node 20.12+ and a [TypeSafe](https://typesafe.ai) API key.
 
 ```bash
-claude mcp add agentctl-fastpath -s user -e TYPESAFE_API_KEY=<key> -- npx -y agentctl-fastpath start
+claude mcp add agent-fastpath -s user -e TYPESAFE_API_KEY=<key> -- npx -y agent-fastpath start
 npx playwright install chromium   # only needed for the browser tool
 ```
 
-For Cursor, Codex, and all settings, see [configuration](docs/configuration.md). Check your setup with `npx agentctl-fastpath doctor`.
+For Cursor, Codex, and all settings, see [configuration](docs/configuration.md). Check your setup with `npx agent-fastpath doctor`.
 
 Without an API key the server still runs: deterministic checks work, and semantic questions return `escalate` instead of guessing.
 

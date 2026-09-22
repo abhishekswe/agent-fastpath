@@ -4,7 +4,7 @@
 host agent (Claude Code, Cursor, Codex)
         │  MCP over stdio
         ▼
-agentctl-fastpath
+agent-fastpath
   ├─ fastpath_evaluate ─┐
   ├─ fastpath_triage ───┼─► capability router
   │                     │     1. redact secrets, enforce size limit
@@ -36,7 +36,7 @@ agentctl-fastpath
 | `provider-typesafe` | TypeSafe System One client, answer normalization, test mock, unavailable placeholder |
 | `provider-browser` | Playwright sessions, element extraction, network policy, egress proxy |
 | `mcp-server` | Tool schemas and handlers, server wiring, stdio entrypoint |
-| `cli` | The published `agentctl-fastpath` command; bundles the packages above |
+| `cli` | The published `agent-fastpath` command; bundles the packages above |
 | `benchmark` | Measures context avoided and latency against the real provider |
 
 Only `cli` is published. The others are internal workspace packages bundled into it at build time.

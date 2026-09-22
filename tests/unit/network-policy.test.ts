@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { SSRFBlockedError } from '@agentctl/core';
-import { assertNavigationAllowed, BrowserSafety, isNonPublicAddress } from '@agentctl/provider-browser';
+import { SSRFBlockedError } from '@agent-fastpath/core';
+import { assertNavigationAllowed, BrowserSafety, isNonPublicAddress } from '@agent-fastpath/provider-browser';
 
 const publicOnly = { allowedOrigins: [], allowPrivateNetworks: false };
 

@@ -1,9 +1,9 @@
 {
-  "name": "@agentctl/core",
+  "name": "@agent-fastpath/core",
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Internal workspace package of agentctl-fastpath. Bundled into the published CLI; not published on its own.",
+  "description": "Internal workspace package of agent-fastpath. Bundled into the published CLI; not published on its own.",
   "exports": {
     ".": "./src/index.ts"
   },

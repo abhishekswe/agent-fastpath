@@ -5,7 +5,7 @@
  */
 
 import { randomBytes } from 'crypto';
-import { InteractiveElement, StaleObservationError } from '@agentctl/core';
+import { InteractiveElement, StaleObservationError } from '@agent-fastpath/core';
 
 export class ObservationTokenManager {
   private currentObservationId: string = '';

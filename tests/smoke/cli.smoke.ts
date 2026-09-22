@@ -13,9 +13,10 @@ import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 
 const BIN = resolve('packages/cli/dist/index.js');
-const PKG_VERSION = JSON.parse(
+const PKG = JSON.parse(
   execFileSync('node', ['-p', 'JSON.stringify(require("./packages/cli/package.json"))']).toString()
-).version;
+);
+const PKG_VERSION = PKG.version;
 
 function cleanEnv(): Record<string, string> {
   const env: Record<string, string> = {};
@@ -26,8 +27,24 @@ function cleanEnv(): Record<string, string> {
 }
 
 test('the built binary reports its version', () => {
+  assert.equal(PKG.name, 'agent-fastpath');
+  assert.deepEqual(PKG.bin, { 'agent-fastpath': 'dist/index.js' });
   assert.equal(PKG_VERSION, '0.1.1', 'the release manifest is versioned');
   assert.equal(execFileSync('node', [BIN, '--version']).toString().trim(), PKG_VERSION);
+});
+
+test('the built binary prints only the new install configuration', () => {
+  const legacyName = ['agentctl', 'fastpath'].join('-');
+  for (const target of ['claude-code', 'cursor', 'codex']) {
+    const output = execFileSync('node', [BIN, 'install-config', target]).toString();
+    assert.match(output, /agent-fastpath/);
+    assert.ok(!output.includes(legacyName));
+  }
+});
+
+test('doctor prints the new install command', () => {
+  const output = execFileSync('node', [BIN, 'doctor'], { env: cleanEnv() }).toString();
+  assert.match(output, /npx -y agent-fastpath start/);
 });
 
 test('the built binary serves MCP over stdio and shuts down cleanly', async () => {
@@ -35,6 +52,8 @@ test('the built binary serves MCP over stdio and shuts down cleanly', async () =
   const transport = new StdioClientTransport({ command: 'node', args: [BIN, 'start'], cwd, env: cleanEnv() });
   const client = new Client({ name: 'smoke', version: '1.0.0' });
   await client.connect(transport);
+
+  assert.equal(client.getServerVersion()?.name, 'agent-fastpath');
 
   const call = async (name: string, args: Record<string, unknown> = {}) => {
     const res: any = await client.callTool({ name, arguments: args });

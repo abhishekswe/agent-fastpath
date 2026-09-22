@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { EscalationGate } from '@agentctl/core';
+import { EscalationGate } from '@agent-fastpath/core';
 
 const choice = (confidence: number, probabilities: Record<string, number>) => ({
   choice: Object.keys(probabilities)[0],

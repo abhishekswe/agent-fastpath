@@ -37,4 +37,4 @@ Semantic evaluation is not local-only: redacted state and bounded triage excerpt
 
 ## Reporting a vulnerability
 
-Open a private security advisory on GitHub: https://github.com/abhishekswe/agentctl-fastpath/security/advisories/new
+Open a private security advisory on GitHub: https://github.com/abhishekswe/agent-fastpath/security/advisories/new

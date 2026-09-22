@@ -1,6 +1,6 @@
 # Providers
 
-Judgment and browser work sit behind two interfaces in `@agentctl/core`, so either can be replaced without changing the tools.
+Judgment and browser work sit behind two interfaces in `@agent-fastpath/core`, so either can be replaced without changing the tools.
 
 ## Judgment provider
 

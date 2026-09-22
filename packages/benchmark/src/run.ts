@@ -9,9 +9,9 @@
 
 import { readdirSync, readFileSync, statSync } from 'fs';
 import { join, relative, resolve } from 'path';
-import { CapabilityRouter, ResultCompactor } from '@agentctl/core';
-import { TypeSafeJudgmentProvider } from '@agentctl/provider-typesafe';
-import { handleFastpathTriage } from '@agentctl/mcp-server';
+import { CapabilityRouter, ResultCompactor } from '@agent-fastpath/core';
+import { TypeSafeJudgmentProvider } from '@agent-fastpath/provider-typesafe';
+import { handleFastpathTriage } from '@agent-fastpath/mcp-server';
 
 const ROOT = resolve(process.cwd());
 

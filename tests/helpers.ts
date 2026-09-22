@@ -7,8 +7,8 @@ import http from 'node:http';
 import { AddressInfo } from 'node:net';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
-import { FastpathMcpServer, FastpathServerOptions } from '@agentctl/mcp-server';
-import { JudgmentProvider, JudgmentRequest, JudgmentResult, TypedAnswer } from '@agentctl/core';
+import { FastpathMcpServer, FastpathServerOptions } from '@agent-fastpath/mcp-server';
+import { JudgmentProvider, JudgmentRequest, JudgmentResult, TypedAnswer } from '@agent-fastpath/core';
 
 export interface Connected {
   client: Client;

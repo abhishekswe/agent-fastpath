@@ -1,11 +1,11 @@
 {
-  "name": "agentctl-fastpath",
+  "name": "agent-fastpath",
   "version": "0.1.1",
   "description": "MCP server that gives coding agents fast typed decisions, file triage, and a bounded headless browser.",
   "type": "module",
   "license": "MIT",
   "bin": {
-    "agentctl-fastpath": "dist/index.js"
+    "agent-fastpath": "dist/index.js"
   },
   "files": [
     "dist",
@@ -17,11 +17,11 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/abhishekswe/agentctl-fastpath.git"
+    "url": "git+https://github.com/abhishekswe/agent-fastpath.git"
   },
-  "homepage": "https://github.com/abhishekswe/agentctl-fastpath#readme",
+  "homepage": "https://github.com/abhishekswe/agent-fastpath#readme",
   "bugs": {
-    "url": "https://github.com/abhishekswe/agentctl-fastpath/issues"
+    "url": "https://github.com/abhishekswe/agent-fastpath/issues"
   },
   "keywords": [
     "mcp",
@@ -40,9 +40,9 @@
     "zod": "^3.25.76"
   },
   "devDependencies": {
-    "@agentctl/core": "0.1.0",
-    "@agentctl/mcp-server": "0.1.0",
-    "@agentctl/provider-browser": "0.1.0",
-    "@agentctl/provider-typesafe": "0.1.0"
+    "@agent-fastpath/core": "0.1.0",
+    "@agent-fastpath/mcp-server": "0.1.0",
+    "@agent-fastpath/provider-browser": "0.1.0",
+    "@agent-fastpath/provider-typesafe": "0.1.0"
   }
 }

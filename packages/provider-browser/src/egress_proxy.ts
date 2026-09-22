@@ -83,7 +83,7 @@ export class EgressProxy {
       address = await this.resolveTarget(target.hostname);
     } catch (err: any) {
       this.record(target.origin, err.message);
-      res.writeHead(403, { 'Content-Type': 'text/plain' }).end(`Blocked by agentctl-fastpath: ${err.message}`);
+      res.writeHead(403, { 'Content-Type': 'text/plain' }).end(`Blocked by agent-fastpath: ${err.message}`);
       return;
     }
 

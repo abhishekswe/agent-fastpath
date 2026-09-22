@@ -7,7 +7,7 @@ import {
   JudgmentRequest,
   JudgmentResult,
   ProviderUnavailableError
-} from '@agentctl/core';
+} from '@agent-fastpath/core';
 import { TypeSafeQuestionBuilder } from './questions.js';
 
 export interface TypeSafeClientOptions {

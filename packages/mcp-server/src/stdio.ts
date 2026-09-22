@@ -1,5 +1,5 @@
 /**
- * stdio transport entrypoint for the agentctl-fastpath MCP server.
+ * stdio transport entrypoint for the agent-fastpath MCP server.
  */
 
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';

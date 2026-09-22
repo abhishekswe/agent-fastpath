@@ -1,5 +1,5 @@
 /**
- * Standard typed error hierarchy for agentctl-fastpath.
+ * Standard typed error hierarchy for agent-fastpath.
  */
 
 export class FastpathError extends Error {

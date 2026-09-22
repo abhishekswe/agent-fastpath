@@ -1,17 +1,17 @@
 {
-  "name": "@agentctl/mcp-server",
+  "name": "@agent-fastpath/mcp-server",
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Internal workspace package of agentctl-fastpath. Bundled into the published CLI; not published on its own.",
+  "description": "Internal workspace package of agent-fastpath. Bundled into the published CLI; not published on its own.",
   "exports": {
     ".": "./src/index.ts"
   },
   "types": "./src/index.ts",
   "dependencies": {
-    "@agentctl/core": "0.1.0",
-    "@agentctl/provider-typesafe": "0.1.0",
-    "@agentctl/provider-browser": "0.1.0",
+    "@agent-fastpath/core": "0.1.0",
+    "@agent-fastpath/provider-typesafe": "0.1.0",
+    "@agent-fastpath/provider-browser": "0.1.0",
     "@modelcontextprotocol/sdk": "^1.17.0",
     "zod": "^3.25.76"
   }

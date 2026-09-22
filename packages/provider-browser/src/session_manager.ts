@@ -5,7 +5,7 @@
 
 import { randomBytes } from 'crypto';
 import { Browser, BrowserContext, Page, chromium } from 'playwright';
-import { ProviderUnavailableError, SessionLimits } from '@agentctl/core';
+import { ProviderUnavailableError, SessionLimits } from '@agent-fastpath/core';
 import { ObservationTokenManager } from './observation_token.js';
 import { EgressProxy } from './egress_proxy.js';
 import { LookupFn, systemLookup } from './network_policy.js';
@@ -76,7 +76,7 @@ export class SessionManager {
 
     const context = await browser.newContext({
       viewport: { width: 1280, height: 800 },
-      userAgent: 'agentctl-fastpath',
+      userAgent: 'agent-fastpath',
       proxy: proxyConfig,
       acceptDownloads: false,
       serviceWorkers: 'block'

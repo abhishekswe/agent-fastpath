@@ -3,8 +3,8 @@ import assert from 'node:assert/strict';
 import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { JudgmentRequest, JudgmentResult } from '@agentctl/core';
-import { UnavailableJudgmentProvider } from '@agentctl/provider-typesafe';
+import { JudgmentRequest, JudgmentResult } from '@agent-fastpath/core';
+import { UnavailableJudgmentProvider } from '@agent-fastpath/provider-typesafe';
 import { connect } from '../helpers.js';
 
 /** Scores items by whether they mention "ssrf", with confidence set per item. */

@@ -1,5 +1,5 @@
 /**
- * Core contract and type definitions for agentctl-fastpath.
+ * Core contract and type definitions for agent-fastpath.
  */
 
 export type EvaluationStatus = 'accept' | 'review' | 'escalate' | 'blocked' | 'error';

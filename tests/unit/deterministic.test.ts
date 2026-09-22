@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { DeterministicEngine, PathTraversalError } from '@agentctl/core';
+import { DeterministicEngine, PathTraversalError } from '@agent-fastpath/core';
 
 test('ship_gate: any failure signal blocks, even next to passing tests', () => {
   for (const log of [

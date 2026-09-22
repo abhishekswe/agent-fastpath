@@ -1,5 +1,5 @@
 /**
- * Provider interface specifications for agentctl-fastpath.
+ * Provider interface specifications for agent-fastpath.
  */
 
 import {

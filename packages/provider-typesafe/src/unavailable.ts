@@ -4,7 +4,7 @@
  * questions return control to the host rather than fabricated answers.
  */
 
-import { JudgmentProvider, JudgmentRequest, JudgmentResult, ProviderUnavailableError } from '@agentctl/core';
+import { JudgmentProvider, JudgmentRequest, JudgmentResult, ProviderUnavailableError } from '@agent-fastpath/core';
 
 export class UnavailableJudgmentProvider implements JudgmentProvider {
   public readonly id = 'none';

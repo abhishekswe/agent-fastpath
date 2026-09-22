@@ -1,13 +1,13 @@
 #!/usr/bin/env node
 /**
- * agentctl-fastpath CLI.
+ * agent-fastpath CLI.
  */
 
 import { existsSync } from 'fs';
 import { resolve } from 'path';
 import { Command } from 'commander';
-import { CapabilityRouter, PRESET_REGISTRY } from '@agentctl/core';
-import { VERSION, createJudgmentProvider, runStdioServer } from '@agentctl/mcp-server';
+import { CapabilityRouter, PRESET_REGISTRY } from '@agent-fastpath/core';
+import { VERSION, createJudgmentProvider, runStdioServer } from '@agent-fastpath/mcp-server';
 
 // A .env in the working directory is a convenience for local use. MCP clients should
 // pass TYPESAFE_API_KEY through their server config instead.
@@ -23,7 +23,7 @@ if (existsSync(envFile)) {
 const program = new Command();
 
 program
-  .name('agentctl-fastpath')
+  .name('agent-fastpath')
   .description('MCP server that gives coding agents fast typed decisions, file triage, and a bounded browser')
   .version(VERSION);
 
@@ -64,6 +64,8 @@ program
       line(false, 'Browser', `${String(err.message).split('\n')[0]}. Run: npx playwright install chromium`);
     }
 
+    console.log('info  MCP install: npx -y agent-fastpath start');
+
     process.exitCode = ok ? 0 : 1;
   });
 
@@ -90,19 +92,19 @@ program
   .action((client: string) => {
     const serverEntry = {
       command: 'npx',
-      args: ['-y', 'agentctl-fastpath', 'start'],
+      args: ['-y', 'agent-fastpath', 'start'],
       env: { TYPESAFE_API_KEY: '<your-typesafe-api-key>' }
     };
     if (client === 'claude-code') {
-      console.log('claude mcp add agentctl-fastpath -s user -e TYPESAFE_API_KEY=<your-typesafe-api-key> -- npx -y agentctl-fastpath start');
+      console.log('claude mcp add agent-fastpath -s user -e TYPESAFE_API_KEY=<your-typesafe-api-key> -- npx -y agent-fastpath start');
     } else if (client === 'cursor') {
       console.log('Add to ~/.cursor/mcp.json:\n');
-      console.log(JSON.stringify({ mcpServers: { 'agentctl-fastpath': serverEntry } }, null, 2));
+      console.log(JSON.stringify({ mcpServers: { 'agent-fastpath': serverEntry } }, null, 2));
     } else if (client === 'codex') {
       console.log('Add to ~/.codex/config.toml:\n');
-      console.log('[mcp_servers.agentctl-fastpath]');
+      console.log('[mcp_servers.agent-fastpath]');
       console.log('command = "npx"');
-      console.log('args = ["-y", "agentctl-fastpath", "start"]');
+      console.log('args = ["-y", "agent-fastpath", "start"]');
       console.log('env = { TYPESAFE_API_KEY = "<your-typesafe-api-key>" }');
     } else {
       console.error(`Unknown client "${client}". Use claude-code, cursor, or codex.`);

@@ -2,7 +2,7 @@
  * Question translation and validation for TypeSafe System One API.
  */
 
-import { QuestionDef, TypedAnswer } from '@agentctl/core';
+import { QuestionDef, TypedAnswer } from '@agent-fastpath/core';
 
 export class TypeSafeQuestionBuilder {
   /**

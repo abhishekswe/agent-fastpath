@@ -2,7 +2,7 @@
  * In-browser DOM extraction and element indexing.
  */
 
-import { InteractiveElement } from '@agentctl/core';
+import { InteractiveElement } from '@agent-fastpath/core';
 
 export class DomExtractor {
   /**

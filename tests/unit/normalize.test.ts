@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { TypeSafeQuestionBuilder } from '@agentctl/provider-typesafe';
+import { TypeSafeQuestionBuilder } from '@agent-fastpath/provider-typesafe';
 
 // Shape captured from the live TypeSafe System One API (jev-1.13.0).
 const liveResponse = {

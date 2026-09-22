@@ -13,7 +13,7 @@ import {
   PRESET_REGISTRY,
   defaultEvidenceStore,
   effectiveRoots
-} from '@agentctl/core';
+} from '@agent-fastpath/core';
 import { VERSION } from '../version.js';
 
 export const FastpathEvidenceShape = {

@@ -14,7 +14,7 @@ import {
   ResultCompactor,
   defaultEvidenceStore,
   defaultMetricsRecorder
-} from '@agentctl/core';
+} from '@agent-fastpath/core';
 import { PolicySchema } from './evaluate.js';
 
 /** Bytes read per file; the judgment call sees the first MAX_JUDGED_CHARS of it. */

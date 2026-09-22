@@ -18,7 +18,7 @@ import {
   PolicyBlockedError,
   ProviderUnavailableError,
   SSRFBlockedError
-} from '@agentctl/core';
+} from '@agent-fastpath/core';
 import { BrowserSafety } from './safety.js';
 import { ActiveSession, SessionManager, SessionManagerOptions } from './session_manager.js';
 import { DomExtractor } from './dom_extractor.js';

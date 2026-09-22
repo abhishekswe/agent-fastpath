@@ -8,7 +8,7 @@ import {
   JudgmentRequest,
   JudgmentResult,
   TypedAnswer
-} from '@agentctl/core';
+} from '@agent-fastpath/core';
 
 export class MockTypeSafeProvider implements JudgmentProvider {
   public readonly id = 'typesafe:mock';

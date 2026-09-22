@@ -10,7 +10,7 @@
 
 import { promises as dns } from 'dns';
 import { isIP } from 'net';
-import { SessionLimits, SSRFBlockedError } from '@agentctl/core';
+import { SessionLimits, SSRFBlockedError } from '@agent-fastpath/core';
 
 export type LookupFn = (hostname: string) => Promise<string[]>;
 

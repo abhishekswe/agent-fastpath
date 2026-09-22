@@ -1,5 +1,5 @@
 /**
- * @agentctl/core exports
+ * @agent-fastpath/core exports
  */
 
 export * from './contracts/types.js';

@@ -3,7 +3,7 @@
  * Network safety (SSRF, origin allowlists) lives in network_policy.ts and egress_proxy.ts.
  */
 
-import { InteractiveElement } from '@agentctl/core';
+import { InteractiveElement } from '@agent-fastpath/core';
 
 // Word-bounded so "Dropdown" and "Display" are not flagged.
 const IRREVERSIBLE_LABEL =

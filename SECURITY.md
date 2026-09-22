@@ -6,7 +6,7 @@ Security fixes are provided for the latest `0.1.x` release. Upgrade to the newes
 
 ## Reporting a vulnerability
 
-Do not open a public issue for a suspected vulnerability. Use a [private GitHub security advisory](https://github.com/abhishekswe/agentctl-fastpath/security/advisories/new) and include:
+Do not open a public issue for a suspected vulnerability. Use a [private GitHub security advisory](https://github.com/abhishekswe/agent-fastpath/security/advisories/new) and include:
 
 - the affected version and operating system;
 - the MCP client and relevant server configuration;

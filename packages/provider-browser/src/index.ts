@@ -1,5 +1,5 @@
 /**
- * @agentctl/provider-browser exports
+ * @agent-fastpath/provider-browser exports
  */
 
 export * from './safety.js';

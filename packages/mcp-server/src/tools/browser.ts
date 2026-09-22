@@ -21,7 +21,7 @@ import {
   PolicyBlockedError,
   ResultCompactor,
   SessionLimits
-} from '@agentctl/core';
+} from '@agent-fastpath/core';
 
 const PAGE_TEXT_FOR_JUDGMENT = 6000;
 const MAX_CHOICE_ELEMENTS = 40;
