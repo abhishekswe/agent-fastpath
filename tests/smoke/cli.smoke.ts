@@ -26,6 +26,7 @@ function cleanEnv(): Record<string, string> {
 }
 
 test('the built binary reports its version', () => {
+  assert.equal(PKG_VERSION, '0.1.1', 'the release manifest is versioned');
   assert.equal(execFileSync('node', [BIN, '--version']).toString().trim(), PKG_VERSION);
 });
 
