@@ -23,29 +23,28 @@ test('ship_gate: clean runs pass deterministically', () => {
   }
 });
 
-test('ship_gate: FP1 benign phrases do not trigger false BLOCKED', () => {
+test('ship_gate: FP1 exact benign states never trigger deterministic test failure', () => {
   const benign = [
-    'Returns 401 error when auth header is missing',
-    'Retries up to 3 errors before timing out',
-    'Handles HTTP 500 errors gracefully',
-    'Locks account after 2 failed login attempts'
+    'Added handling so a 401 error from the API surfaces as a typed error. 0 failed, 88 passed.',
+    'Regression tests were red first (3 failed) and are green now: 0 failed, 91 passed.',
+    'Now retries 3 errors before giving up; covered by tests. 0 failed, 40 passed.',
+    'Maps HTTP 500 errors to a retry. All green: 0 failed, 12 passed.',
+    'Docs: explain what happens after 2 failed login attempts. No code change.'
   ];
-  for (const text of benign) {
-    const res = DeterministicEngine.evaluateExact(text, 'ship_gate');
-    assert.equal(res.handled, false, `Should not be handled deterministically: ${text}`);
+  for (const state of benign) {
+    const res = DeterministicEngine.evaluateExact(state, 'ship_gate');
+    assert.notEqual(res.reasonCode, 'DETERMINISTIC_TEST_FAILURE_DETECTED', state);
   }
 });
 
 test('ship_gate: FP6 diff presence falls through to semantic review even with green test summary', () => {
-  const diffWithPassingTests = `
-diff --git a/src/auth.ts b/src/auth.ts
+  const diffWithPassingTests = `diff --git a/src/auth.ts b/src/auth.ts
 --- a/src/auth.ts
 +++ b/src/auth.ts
-@@ -10,2 +10,2 @@
--  if (!session) throw new UnauthorizedError();
-+  // bypassed auth
-Tests: 214 passed, 0 failed
-`;
+@@ -15,3 +15,3 @@
+-  verifyJwt(req.headers.authorization);
++  // bypassed jwt check
+Tests: 154 passed, 0 failed.`;
   const res = DeterministicEngine.evaluateExact(diffWithPassingTests, 'ship_gate');
   assert.equal(res.handled, false, 'Should fall through to semantic evaluation when diff is present');
 });

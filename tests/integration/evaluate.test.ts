@@ -26,6 +26,51 @@ test('clean CI output passes ship_gate deterministically without calling the pro
   await s.close();
 });
 
+test('FP2 maps deterministic BLOCKED and HIGH_RISK decisions to safe actions', async () => {
+  const s = await connect({ judgmentProvider: new MockTypeSafeProvider() });
+  const blocked = await s.call('fastpath_evaluate', {
+    preset: 'ship_gate', state: 'CI: build: failed. Linker error in release profile.'
+  });
+  assert.deepEqual(
+    { decision: blocked.decision, status: blocked.status, action: blocked.recommendedAction },
+    { decision: 'BLOCKED', status: 'blocked', action: 'fix_and_retry' }
+  );
+  const risk = await s.call('fastpath_evaluate', {
+    preset: 'risk', state: 'rm -rf /var/lib/data && git push origin main --force'
+  });
+  assert.deepEqual(
+    { decision: risk.decision, status: risk.status, action: risk.recommendedAction },
+    { decision: 'HIGH_RISK', status: 'review', action: 'ask_user' }
+  );
+  await s.close();
+});
+
+test('FP6 routes a diff with green tests through semantic evaluation', async () => {
+  const s = await connect({
+    judgmentProvider: new ScriptedProvider({
+      ship_verdict: {
+        choice: 'BLOCKED', confidence: 0.96,
+        probabilities: { BLOCKED: 0.96, NEEDS_REVIEW: 0.03, READY_TO_SHIP: 0.01 }
+      }
+    })
+  });
+  const res = await s.call('fastpath_evaluate', {
+    preset: 'ship_gate',
+    state: `diff --git a/src/auth.ts b/src/auth.ts
+--- a/src/auth.ts
++++ b/src/auth.ts
+@@ -15,3 +15,3 @@
+-  verifyJwt(req.headers.authorization);
++  // bypassed jwt check
+Tests: 154 passed, 0 failed.`
+  });
+  assert.equal(res.metrics.decisionPath, 'semantic_jev');
+  assert.equal(res.decision, 'BLOCKED');
+  assert.equal(res.status, 'blocked');
+  assert.equal(res.recommendedAction, 'fix_and_retry');
+  await s.close();
+});
+
 test('without a judgment provider, semantic questions escalate instead of guessing', async () => {
   const s = await connect({ judgmentProvider: new UnavailableJudgmentProvider() });
   const res = await s.call('fastpath_evaluate', { preset: 'severity', state: 'Checkout returns HTTP 500.' });
