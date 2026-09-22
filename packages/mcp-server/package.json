@@ -13,6 +13,6 @@
     "@agent-fastpath/provider-typesafe": "0.1.0",
     "@agent-fastpath/provider-browser": "0.1.0",
     "@modelcontextprotocol/sdk": "^1.17.0",
-    "zod": "^3.25.76"
+    "zod": "^4.6.5"
   }
 }
