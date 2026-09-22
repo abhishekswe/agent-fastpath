@@ -7,3 +7,9 @@ dist/
 packages/cli/README.md
 packages/cli/LICENSE
 *.tgz
+
+# Local benchmark and release-audit output may contain absolute paths or private repo names.
+BENCHMARK_*_RESULTS.md
+BENCHMARK_*_RESULTS.md.json
+benchmark-results/
+release-audit/
