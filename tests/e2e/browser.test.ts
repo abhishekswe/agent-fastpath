@@ -43,11 +43,18 @@ test('open returns a compact element table with observation-bound refs', async (
   const labels = res.observation.elements.map((e: any) => e.label);
   assert.deepEqual(labels, ['More information', 'Delete project', 'Search docs']);
   assert.ok(res.observation.elements.every((e: any) => e.ref.startsWith(`${res.observation.observationId}:`)));
+  const parsedBytes = Buffer.byteLength(res.observation.summaryTable) +
+    Buffer.byteLength(JSON.stringify(res.observation.elements));
+  assert.ok(res.metrics.stateBytesEvaluated <= parsedBytes);
   assert.ok(res.metrics.estimatedTokensSaved >= 0);
-  const evidence = await open.call('fastpath_evidence', { traceId: res.traceId });
+  assert.ok(res.metrics.estimatedTokensSaved < 100_000);
+  const evidence = await open.call('fastpath_evidence', { traceId: res.traceId, detailLevel: 'full' });
   assert.equal(evidence.traceId, res.traceId);
   assert.equal(evidence.tool, 'fastpath_browser');
   assert.equal(evidence.status, 'accept');
+  assert.equal(evidence.diagnostics.mode, 'open');
+  assert.equal(evidence.diagnostics.url, `${fixture.url}/`);
+  assert.match(evidence.timestamp, /^\d{4}-\d{2}-\d{2}T/);
   await open.call('fastpath_browser', { mode: 'close', sessionId: res.sessionId });
 });
 
@@ -109,6 +116,8 @@ test('check needs the whole phrase, then defers to the judge', async () => {
       assertion: 'Project archived successfully'
     });
     assert.equal(check.outcome.goalSatisfied, verified);
+    assert.equal(check.status, verified ? 'accept' : 'review');
+    assert.ok(check.outcome.confidence >= 0.9);
     assert.match(String(provider.lastRequest?.state), /Project active/, 'the judge saw the page text');
     await s.close();
   }

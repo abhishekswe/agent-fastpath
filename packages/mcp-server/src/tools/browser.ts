@@ -348,9 +348,9 @@ async function checkAssertion(deps: BrowserToolDeps, sessionId: string, assertio
   } else {
     confidence = res.confidence;
   }
-  const status: EvaluationStatus = (!verified && (res.reasonCode === 'EVIDENCE_INCONCLUSIVE' || res.status === 'escalate'))
-    ? 'review'
-    : res.status;
+  // A negative browser assertion is evidence for the host to inspect, not an action
+  // that should be accepted automatically. Positive claims retain the judge's gate.
+  const status: EvaluationStatus = verified ? res.status : 'review';
 
   return {
     satisfied: verified,
