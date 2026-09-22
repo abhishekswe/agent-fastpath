@@ -1,10 +1,27 @@
 # agent-fastpath
 
-Formerly published as agentctl-fastpath.
+**An MCP server that makes small judgment calls for your coding agent: ship gates, risk checks, file triage, and browser verification, with typed, calibrated answers.**
 
-An MCP server that takes small, well-defined judgment calls off your coding agent's plate: is this CI log ready to ship, which of these 40 files handle auth, did the page actually say "Order confirmed". It answers with typed, calibrated results in milliseconds to a couple of seconds, and hands control back when it is not sure.
+[![npm](https://img.shields.io/npm/v/agent-fastpath)](https://www.npmjs.com/package/agent-fastpath)
+[![CI](https://github.com/abhishekswe/agent-fastpath/actions/workflows/ci.yml/badge.svg)](https://github.com/abhishekswe/agent-fastpath/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
-Works with Claude Code, Cursor, Codex, and any MCP client.
+Coding agents like Claude Code, Codex, and Cursor spend context and time on small decisions: is this CI log ready to ship, which of these 40 files handle auth, did the page actually say "Order confirmed". agent-fastpath answers them with typed, calibrated results in milliseconds to a couple of seconds, and hands control back when it is not sure.
+
+- **Keeps files out of your agent's context.** Triage reads files on the server. In the [benchmark](docs/benchmarking.md), the agent read 408 tokens instead of 35,256.
+- **Rules first, then a fast model.** Clear-cut cases are decided by code in under a millisecond. The rest go to a fast LLM-as-a-judge model.
+- **Says when it is unsure.** Every result is `accept`, `review`, or `escalate`, so your agent knows when to ask you.
+- **Safe browser.** Headless Playwright with SSRF protection and a gate on irreversible actions like delete or pay.
+
+Works with any MCP client, including Claude Code, Codex CLI, Cursor, OpenCode, Gemini CLI, Windsurf, and Cline.
+
+## Use cases
+
+- **Ship gate for CI and test logs.** The `ship_gate` preset returns `READY_TO_SHIP`, `NEEDS_REVIEW`, or `BLOCKED`.
+- **Find the relevant files without reading them.** `fastpath_triage` ranks up to 500 files against a query and returns short snippets.
+- **Risk check before destructive commands.** The `risk` preset flags `rm -rf`, `git push --force`, `DROP TABLE`, and similar.
+- **Catch ambiguous or contradictory requirements.** The `ambiguity` preset returns `ask_user` instead of guessing.
+- **Verify what a web page says.** `fastpath_browser` checks claims like "the order was confirmed" against the live page.
 
 ## Tools
 
@@ -92,5 +109,7 @@ npm run bench        # context and latency benchmark (needs TYPESAFE_API_KEY)
 ## License
 
 MIT
+
+This package was previously published as `agentctl-fastpath`.
 
 Contributions are welcome; see [CONTRIBUTING.md](CONTRIBUTING.md). Release changes are recorded in [CHANGELOG.md](CHANGELOG.md).

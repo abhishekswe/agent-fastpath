@@ -1,7 +1,7 @@
 {
   "name": "agent-fastpath",
   "version": "0.1.1",
-  "description": "MCP server that gives coding agents fast typed decisions, file triage, and a bounded headless browser.",
+  "description": "MCP server for Claude Code, Codex, and Cursor: fast LLM-as-a-judge decisions (ship gate, risk, relevance), file triage that keeps files out of your agent's context, and a token-light headless browser.",
   "type": "module",
   "license": "MIT",
   "bin": {
@@ -25,13 +25,28 @@
   },
   "keywords": [
     "mcp",
+    "mcp-server",
     "model-context-protocol",
     "claude-code",
-    "cursor",
+    "claude",
     "codex",
+    "cursor",
+    "opencode",
+    "gemini-cli",
     "ai-agents",
+    "coding-agent",
+    "agentic",
+    "llm",
+    "llm-as-a-judge",
+    "context-engineering",
+    "token-optimization",
+    "ship-gate",
+    "code-review",
+    "guardrails",
+    "browser-automation",
     "playwright",
-    "llm"
+    "headless-browser",
+    "developer-tools"
   ],
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.17.0",
