@@ -19,7 +19,9 @@ After every navigation and action the final URL is checked against the allowlist
 
 **Stale targets.** Element refs look like `obs_<id>:<n>` and are valid only for the latest observation. After the page changes, old refs are rejected with `STALE_OBSERVATION_REFERENCE`.
 
-**Secrets.** State is redacted before it reaches the judgment provider or the trace store: private key blocks, TypeSafe, OpenAI, Anthropic, GitHub, AWS, and Slack keys, bearer tokens, `*_API_KEY=`/`*_SECRET=`/`*_PASSWORD=` assignments, and JSON password fields. Triage snippets are redacted too. Redaction cannot be turned off by a caller.
+**Secrets and provider data.** State is redacted before it reaches the judgment provider or the trace store: private key blocks, TypeSafe, OpenAI, Anthropic, GitHub, AWS, and Slack keys, bearer tokens, `*_API_KEY=`/`*_SECRET=`/`*_PASSWORD=` assignments, and JSON password fields. Triage reads at most 64 KB per file, sends at most 4,000 characters of each file for semantic relevance scoring, and redacts the returned snippet. Redaction cannot be turned off by a caller.
+
+Semantic evaluation is not local-only: redacted state and bounded triage excerpts are sent to the configured TypeSafe endpoint. The context-saving claim means the MCP host does not receive full source files; it does not mean source-derived excerpts never leave the machine. Keep `FASTPATH_ROOTS` narrow and exclude material that must never be sent to a provider.
 
 **No fabricated answers.** Without an API key, semantic questions return `escalate` with `JUDGMENT_PROVIDER_UNAVAILABLE`. The keyword mock used in tests is never selected automatically.
 
@@ -30,6 +32,7 @@ After every navigation and action the final URL is checked against the allowlist
 - **Irreversible detection reads labels.** A button labelled "Continue" that places an order will not be flagged. Keep the host in the loop for purchases and account changes.
 - **Page content can influence semantic answers.** A page can contain text aimed at the judge. The gate limits the damage (low confidence escalates, `run_bounded` only clicks and never irreversibly), but treat `choose` recommendations as suggestions.
 - **Traces stay in memory.** The last 500 traces are kept in the server process and never written to disk. They contain redacted state summaries.
+- **Redaction is pattern based.** It cannot identify every proprietary secret format or sensitive natural-language passage. Do not treat it as a data-loss-prevention system.
 - **The browser engine is Chromium.** Browser vulnerabilities apply. Keep Playwright updated.
 
 ## Reporting a vulnerability

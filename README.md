@@ -72,10 +72,10 @@ More in [architecture](docs/architecture.md).
 - The browser cannot reach localhost, private networks, or cloud metadata endpoints. Every connection, including redirects and page scripts, goes through a checking proxy.
 - Clicking anything labelled like delete, buy, pay, or publish requires `allowIrreversible: true`.
 - Triage reads only inside the directories you allow.
-- Secrets are redacted before anything leaves the machine.
+- Recognized secret formats are redacted before semantic requests and evidence traces.
 - Tool callers can tighten these limits but not loosen them.
 
-Details and known limits: [security](docs/security.md).
+Semantic evaluation sends redacted state to the configured TypeSafe endpoint. Path triage keeps full files out of the MCP host context, but sends bounded, redacted excerpts to TypeSafe for relevance scoring. Do not include files that must never leave the machine. See the [security policy](SECURITY.md) and [detailed security model](docs/security.md).
 
 ## Development
 
@@ -90,3 +90,5 @@ npm run bench        # context and latency benchmark (needs TYPESAFE_API_KEY)
 ## License
 
 MIT
+
+Contributions are welcome; see [CONTRIBUTING.md](CONTRIBUTING.md). Release changes are recorded in [CHANGELOG.md](CHANGELOG.md).

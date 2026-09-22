@@ -4,13 +4,15 @@
 TYPESAFE_API_KEY=<key> npm run bench
 ```
 
-The benchmark runs against the real provider; it refuses to run without a key rather than report mock numbers.
+The benchmark runs against the real provider; it refuses to run without a key rather than report mock numbers. Label any mock-provider measurement explicitly and do not compare it with production semantic accuracy or latency.
 
 ## What it measures
 
 - **Host tokens:** what the host agent would read to do the task itself: every source file for triage, the log for the ship gate. Estimated as characters / 4.
 - **Fastpath tokens:** the size of the JSON response the host reads instead.
 - **Latency:** wall-clock time for the call.
+
+These are host-context measurements. Path triage reads files inside the server and sends bounded, redacted excerpts to TypeSafe for relevance scoring. A reduction in host-visible tokens is not a claim that no source-derived content reaches the configured provider.
 
 ## Results
 
