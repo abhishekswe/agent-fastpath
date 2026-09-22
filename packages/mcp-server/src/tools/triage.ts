@@ -81,7 +81,7 @@ export async function handleFastpathTriage(
     response: top,
     latencyMs,
     provider: provider.id,
-    decisionPath: status === 'escalate' ? 'escalation' : 'semantic_jev'
+    decisionPath: status === 'error' || readBytes === 0 ? 'deterministic' : status === 'escalate' ? 'escalation' : 'semantic_jev'
   });
 
   await defaultEvidenceStore.saveTrace({

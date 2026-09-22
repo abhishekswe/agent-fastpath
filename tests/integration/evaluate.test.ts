@@ -139,3 +139,46 @@ test('capabilities report the configured limits', async () => {
   assert.equal(caps.providers.judgment.id, 'typesafe:mock');
   await s.close();
 });
+
+test('severity with insufficient info escalates to ask user', async () => {
+  const s = await connect({
+    judgmentProvider: new ScriptedProvider({
+      severity_level: {
+        choice: 'insufficient_info',
+        confidence: 0.88,
+        probabilities: { insufficient_info: 0.88, sev3_minor: 0.08, sev4_cosmetic: 0.04 }
+      }
+    })
+  });
+  const res = await s.call('fastpath_evaluate', {
+    preset: 'severity',
+    state: 'Something seems a bit off with the thing sometimes.'
+  });
+  assert.equal(res.status, 'escalate');
+  assert.equal(res.decision, 'insufficient_info');
+  assert.equal(res.reasonCode, 'SEVERITY_INSUFFICIENT_INFO');
+  assert.equal(res.recommendedAction, 'ask_user');
+  await s.close();
+});
+
+test('ambiguity with clear instruction accepts without gating on ambiguity_type', async () => {
+  const s = await connect({
+    judgmentProvider: new ScriptedProvider({
+      is_ambiguous: { noul: 0.05, answer: false, confidence: 0.95 },
+      ambiguity_type: {
+        choice: 'none',
+        confidence: 0.52,
+        probabilities: { none: 0.52, missing_context: 0.2, underspecified: 0.18, contradictory: 0.1 }
+      }
+    })
+  });
+  const res = await s.call('fastpath_evaluate', {
+    preset: 'ambiguity',
+    state: 'Rename parse_config to load_config in src/config.rs and update its call sites.'
+  });
+  assert.equal(res.status, 'accept');
+  assert.equal(res.decision, false);
+  assert.equal(res.reasonCode, 'SPECIFICATION_CLEAR');
+  assert.equal(res.recommendedAction, 'proceed');
+  await s.close();
+});

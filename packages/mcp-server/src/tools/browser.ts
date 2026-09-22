@@ -340,11 +340,14 @@ async function checkAssertion(deps: BrowserToolDeps, sessionId: string, assertio
   }
   const verified = res.decision === true;
   const verifiedAns = res.answers.verification_status ?? res.answers.is_verified;
-  const confidence = verifiedAns && 'choice' in verifiedAns
-    ? res.confidence
-    : verifiedAns && 'noul' in verifiedAns
-      ? verifiedAns.confidence
-      : res.confidence;
+  let confidence: number;
+  if (verifiedAns && 'choice' in verifiedAns) {
+    confidence = res.confidence;
+  } else if (verifiedAns && 'noul' in verifiedAns) {
+    confidence = verified ? verifiedAns.confidence : Math.round((1 - verifiedAns.noul) * 100) / 100;
+  } else {
+    confidence = res.confidence;
+  }
   const status: EvaluationStatus = (!verified && (res.reasonCode === 'EVIDENCE_INCONCLUSIVE' || res.status === 'escalate'))
     ? 'review'
     : res.status;

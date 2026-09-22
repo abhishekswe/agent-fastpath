@@ -16,6 +16,7 @@ export interface PresetDefinition {
   description: string;
   buildQuestions: (params?: Record<string, unknown>) => Record<string, QuestionDef>;
   synthesizeDecision?: (answers: Record<string, any>) => PresetDecision;
+  getGatedKeys?: (answers: Record<string, any>) => string[];
 }
 
 export const PRESET_REGISTRY: Record<string, PresetDefinition> = {
@@ -186,14 +187,25 @@ export const PRESET_REGISTRY: Record<string, PresetDefinition> = {
           sev1_critical: 'System outage, data loss, security breach, or blocked core workflow',
           sev2_major: 'Major feature impaired with no reasonable workaround',
           sev3_minor: 'Moderate defect with available workaround or edge-case behavior',
-          sev4_cosmetic: 'Minor UI/UX glitch, typo, or aesthetic inconsistency'
+          sev4_cosmetic: 'Minor UI/UX glitch, typo, or aesthetic inconsistency',
+          insufficient_info: 'Vague, partial, or insufficient details to determine impact or severity'
         }
       }
     }),
-    synthesizeDecision: (answers) => ({
-      decision: answers.severity_level?.choice ?? 'sev3_minor',
-      reasonCode: 'SEVERITY_CLASSIFIED'
-    })
+    synthesizeDecision: (answers) => {
+      const choice = answers.severity_level?.choice ?? 'sev3_minor';
+      if (choice === 'insufficient_info') {
+        return {
+          decision: 'insufficient_info',
+          reasonCode: 'SEVERITY_INSUFFICIENT_INFO',
+          escalate: true
+        };
+      }
+      return {
+        decision: choice,
+        reasonCode: 'SEVERITY_CLASSIFIED'
+      };
+    }
   },
 
   ambiguity: {
@@ -206,15 +218,19 @@ export const PRESET_REGISTRY: Record<string, PresetDefinition> = {
       },
       ambiguity_type: {
         type: 'choice',
-        instructions: 'If ambiguous, what is the primary source of ambiguity?',
+        instructions: 'What is the primary ambiguity status or source of ambiguity?',
         criteria: {
-          none: 'Requirements are crisp and actionable',
+          none: 'Not ambiguous: requirements are crisp and actionable',
           missing_context: 'Key inputs, types, or paths are unstated',
           contradictory: 'Two or more requirements contradict each other',
           underspecified: 'Multiple mutually incompatible valid solutions exist'
         }
       }
     }),
+    getGatedKeys: (answers) => {
+      const isAmb = answers.is_ambiguous && 'noul' in answers.is_ambiguous ? answers.is_ambiguous.noul > 0.5 : true;
+      return isAmb ? ['is_ambiguous', 'ambiguity_type'] : ['is_ambiguous'];
+    },
     synthesizeDecision: (answers) => {
       const isAmb = answers.is_ambiguous?.noul > 0.5;
       return {

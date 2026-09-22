@@ -128,7 +128,8 @@ export class CapabilityRouter {
       }, 'semantic_jev', provider.id, { questions });
     }
 
-    const gate = EscalationGate.evaluate(judgment.answers, prepared.policy);
+    const gatedKeys = presetDef?.getGatedKeys?.(judgment.answers);
+    const gate = EscalationGate.evaluate(judgment.answers, prepared.policy, gatedKeys);
     const synthesized = presetDef?.synthesizeDecision?.(judgment.answers);
     const outcome = combine(gate, synthesized, judgment.answers, prepared.policy);
 
