@@ -1,6 +1,6 @@
 {
   "name": "agent-fastpath",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "Jev MCP server: a decision layer for Claude Code, Codex, and Cursor built on TypeSafe Jev (System One model). Ship gates, risk checks, file triage that keeps files out of your agent's context, and a safe headless browser.",
   "type": "module",
   "license": "MIT",

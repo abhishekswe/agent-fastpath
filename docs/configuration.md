@@ -4,7 +4,24 @@
 
 The server speaks MCP over stdio. Every client needs the same three things: the command `npx`, the arguments `-y agent-fastpath start`, and `TYPESAFE_API_KEY` in the environment.
 
-**Claude Code**
+`npx agent-fastpath install-config <client>` prints the snippet for your client. Supported values: `claude-code`, `codex`, `cursor`, `antigravity`, `gemini-cli`, `opencode`, `vscode`, `cline`, `zed`, `amp`, `pi`, `generic`.
+
+| Client | Where the config goes |
+| --- | --- |
+| Claude Code | `claude mcp add` command |
+| Codex | `~/.codex/config.toml` |
+| Cursor | `~/.cursor/mcp.json` |
+| Google Antigravity | `~/.gemini/config/mcp_config.json` |
+| Gemini CLI | `gemini mcp add` command |
+| OpenCode | `~/.config/opencode/opencode.json` |
+| VS Code (GitHub Copilot) | `.vscode/mcp.json` |
+| Cline | MCP Servers > Configure MCP Servers |
+| Zed | Zed `settings.json` |
+| Amp | Amp `settings.json` |
+| Pi | `~/.pi/agent/mcp.json`, via pi-mcp-adapter |
+| Anything else | the client's `mcpServers` config |
+
+### Claude Code
 
 ```bash
 claude mcp add agent-fastpath -s user -e TYPESAFE_API_KEY=<key> -- npx -y agent-fastpath start
@@ -12,7 +29,20 @@ claude mcp add agent-fastpath -s user -e TYPESAFE_API_KEY=<key> -- npx -y agent-
 
 `-s user` makes it available in every project. Without it the server is only registered for the directory you ran the command in.
 
-**Cursor** (`~/.cursor/mcp.json`)
+### Codex
+
+`~/.codex/config.toml`:
+
+```toml
+[mcp_servers.agent-fastpath]
+command = "npx"
+args = ["-y", "agent-fastpath", "start"]
+env = { TYPESAFE_API_KEY = "<key>" }
+```
+
+### Cursor, Google Antigravity, Cline, and other `mcpServers` clients
+
+Most clients share this shape. Put it in the file for your client: `~/.cursor/mcp.json` (Cursor), `~/.gemini/config/mcp_config.json` (Antigravity, then restart it), or Cline's MCP settings. Claude Desktop, Kiro, Warp, Kilo Code, and Roo Code use the same shape.
 
 ```json
 {
@@ -26,16 +56,88 @@ claude mcp add agent-fastpath -s user -e TYPESAFE_API_KEY=<key> -- npx -y agent-
 }
 ```
 
-**Codex** (`~/.codex/config.toml`)
+### Gemini CLI
 
-```toml
-[mcp_servers.agent-fastpath]
-command = "npx"
-args = ["-y", "agent-fastpath", "start"]
-env = { TYPESAFE_API_KEY = "<key>" }
+```bash
+gemini mcp add -s user -e TYPESAFE_API_KEY=<key> agent-fastpath npx -y agent-fastpath start
 ```
 
-`npx agent-fastpath install-config <client>` prints these snippets.
+### OpenCode
+
+`~/.config/opencode/opencode.json`:
+
+```json
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "agent-fastpath": {
+      "type": "local",
+      "command": ["npx", "-y", "agent-fastpath", "start"],
+      "enabled": true,
+      "environment": { "TYPESAFE_API_KEY": "<key>" }
+    }
+  }
+}
+```
+
+### VS Code (GitHub Copilot)
+
+`.vscode/mcp.json` in your workspace:
+
+```json
+{
+  "servers": {
+    "agent-fastpath": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "agent-fastpath", "start"],
+      "env": { "TYPESAFE_API_KEY": "<key>" }
+    }
+  }
+}
+```
+
+### Zed
+
+Zed `settings.json`:
+
+```json
+{
+  "context_servers": {
+    "agent-fastpath": {
+      "command": "npx",
+      "args": ["-y", "agent-fastpath", "start"],
+      "env": { "TYPESAFE_API_KEY": "<key>" }
+    }
+  }
+}
+```
+
+### Amp
+
+Amp `settings.json`:
+
+```json
+{
+  "amp.mcpServers": {
+    "agent-fastpath": {
+      "command": "npx",
+      "args": ["-y", "agent-fastpath", "start"],
+      "env": { "TYPESAFE_API_KEY": "<key>" }
+    }
+  }
+}
+```
+
+### Pi
+
+Pi reads MCP servers through [pi-mcp-adapter](https://github.com/nicobailon/pi-mcp-adapter):
+
+```bash
+pi install npm:pi-mcp-adapter
+```
+
+Then add the `mcpServers` block above to `~/.pi/agent/mcp.json` and restart Pi.
 
 ## Environment variables
 

@@ -29,17 +29,39 @@ function cleanEnv(): Record<string, string> {
 test('the built binary reports its version', () => {
   assert.equal(PKG.name, 'agent-fastpath');
   assert.deepEqual(PKG.bin, { 'agent-fastpath': 'dist/index.js' });
-  assert.equal(PKG_VERSION, '0.1.1', 'the release manifest is versioned');
+  assert.equal(PKG_VERSION, '0.2.0', 'the release manifest is versioned');
   assert.equal(execFileSync('node', [BIN, '--version']).toString().trim(), PKG_VERSION);
 });
 
-test('the built binary prints only the new install configuration', () => {
+const CLIENT_IDS = [
+  'claude-code', 'codex', 'cursor', 'antigravity', 'gemini-cli',
+  'opencode', 'vscode', 'cline', 'zed', 'amp', 'pi', 'generic'
+];
+
+test('install-config prints a runnable config for every supported client', () => {
   const legacyName = ['agentctl', 'fastpath'].join('-');
-  for (const target of ['claude-code', 'cursor', 'codex']) {
+  for (const target of CLIENT_IDS) {
     const output = execFileSync('node', [BIN, 'install-config', target]).toString();
-    assert.match(output, /agent-fastpath/);
-    assert.ok(!output.includes(legacyName));
+    assert.match(output, /agent-fastpath/, target);
+    assert.match(output, /TYPESAFE_API_KEY/, target);
+    assert.ok(!output.includes(legacyName), target);
+
+    // Clients configured by file print a JSON block; it must parse and launch the server.
+    const jsonStart = output.indexOf('{');
+    if (jsonStart >= 0 && target !== 'codex') {
+      const config = JSON.parse(output.slice(jsonStart));
+      const serialized = JSON.stringify(config);
+      assert.match(serialized, /"npx"/, target);
+      assert.match(serialized, /"-y","agent-fastpath","start"/, target);
+    }
   }
+});
+
+test('install-config rejects an unknown client and lists the supported ones', () => {
+  assert.throws(
+    () => execFileSync('node', [BIN, 'install-config', 'nope'], { stdio: 'pipe' }),
+    (err: any) => /Use one of: claude-code, codex, cursor, antigravity/.test(err.stderr.toString())
+  );
 });
 
 test('doctor prints the new install command', () => {

@@ -8,6 +8,7 @@ import { resolve } from 'path';
 import { Command } from 'commander';
 import { CapabilityRouter, PRESET_REGISTRY } from '@agent-fastpath/core';
 import { VERSION, createJudgmentProvider, runStdioServer } from '@agent-fastpath/mcp-server';
+import { CLIENTS, findClient } from './clients.js';
 
 // A .env in the working directory is a convenience for local use. MCP clients should
 // pass TYPESAFE_API_KEY through their server config instead.
@@ -88,28 +89,15 @@ program
 program
   .command('install-config')
   .description('Print the MCP configuration for a client')
-  .argument('[client]', 'claude-code, cursor, or codex', 'claude-code')
-  .action((client: string) => {
-    const serverEntry = {
-      command: 'npx',
-      args: ['-y', 'agent-fastpath', 'start'],
-      env: { TYPESAFE_API_KEY: '<your-typesafe-api-key>' }
-    };
-    if (client === 'claude-code') {
-      console.log('claude mcp add agent-fastpath -s user -e TYPESAFE_API_KEY=<your-typesafe-api-key> -- npx -y agent-fastpath start');
-    } else if (client === 'cursor') {
-      console.log('Add to ~/.cursor/mcp.json:\n');
-      console.log(JSON.stringify({ mcpServers: { 'agent-fastpath': serverEntry } }, null, 2));
-    } else if (client === 'codex') {
-      console.log('Add to ~/.codex/config.toml:\n');
-      console.log('[mcp_servers.agent-fastpath]');
-      console.log('command = "npx"');
-      console.log('args = ["-y", "agent-fastpath", "start"]');
-      console.log('env = { TYPESAFE_API_KEY = "<your-typesafe-api-key>" }');
-    } else {
-      console.error(`Unknown client "${client}". Use claude-code, cursor, or codex.`);
+  .argument('[client]', CLIENTS.map((c) => c.id).join(', '), 'claude-code')
+  .action((id: string) => {
+    const client = findClient(id);
+    if (!client) {
+      console.error(`Unknown client "${id}". Use one of: ${CLIENTS.map((c) => c.id).join(', ')}.`);
       process.exitCode = 1;
+      return;
     }
+    console.log(client.render());
   });
 
 program.parseAsync(process.argv);
