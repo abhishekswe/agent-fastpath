@@ -142,6 +142,4 @@ npm run bench        # context and latency benchmark (needs TYPESAFE_API_KEY)
 
 MIT
 
-This package was previously published as `agentctl-fastpath`.
-
 Contributions are welcome; see [CONTRIBUTING.md](CONTRIBUTING.md). Release changes are recorded in [CHANGELOG.md](CHANGELOG.md).
