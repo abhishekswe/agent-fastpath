@@ -5,14 +5,13 @@
 [![npm](https://img.shields.io/npm/v/agent-fastpath)](https://www.npmjs.com/package/agent-fastpath)
 [![CI](https://github.com/abhishekswe/agent-fastpath/actions/workflows/ci.yml/badge.svg)](https://github.com/abhishekswe/agent-fastpath/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
-[![Live Architecture Demo](https://img.shields.io/badge/Demo-Interactive%20Visualizer-38bdf8)](https://abhishekswe.github.io/agent-fastpath/)
+[![Website](https://img.shields.io/badge/website-agent--fastpath-38bdf8)](https://abhishekswe.github.io/agent-fastpath/)
 
-[![Interactive Architecture & Live Simulator](docs/preview.png)](https://abhishekswe.github.io/agent-fastpath/)
+[![agent-fastpath website: how it decides, real example responses, and setup for 12 coding agents](docs/preview.png)](https://abhishekswe.github.io/agent-fastpath/)
 
-> ⚡ **Live Interactive Explainer & Architecture Simulator:** [https://abhishekswe.github.io/agent-fastpath/](https://abhishekswe.github.io/agent-fastpath/)
+**Website:** [abhishekswe.github.io/agent-fastpath](https://abhishekswe.github.io/agent-fastpath/). See how it decides, real example responses, and setup for 12 coding agents.
 
 Coding agents like Claude Code, Codex, and Cursor spend context and time on small decisions: is this CI log ready to ship, which of these 40 files handle auth, did the page actually say "Order confirmed". agent-fastpath answers them with typed, calibrated results in milliseconds to a couple of seconds, and hands control back when it is not sure.
-
 
 - **Keeps files out of your agent's context.** Triage reads files on the server. In the [benchmark](docs/benchmarking.md), the agent read 408 tokens instead of 35,256.
 - **Rules first, then Jev.** Clear-cut cases are decided by code in under a millisecond. The rest go to [TypeSafe Jev](https://typesafe.ai/blog/introducing-system-one-models-and-jev), a System One model that returns typed decisions with calibrated probabilities instead of text.
@@ -141,5 +140,7 @@ npm run bench        # context and latency benchmark (needs TYPESAFE_API_KEY)
 ## License
 
 MIT
+
+This package was previously published as `agentctl-fastpath`.
 
 Contributions are welcome; see [CONTRIBUTING.md](CONTRIBUTING.md). Release changes are recorded in [CHANGELOG.md](CHANGELOG.md).
