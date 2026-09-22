@@ -5,6 +5,13 @@ on:
     branches: [main]
   pull_request:
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   check:
     runs-on: ubuntu-latest
@@ -20,3 +27,13 @@ jobs:
       - run: npm ci
       - run: npx playwright install --with-deps chromium
       - run: npm run check
+
+  # Single stable check for branch protection, so the required check does not
+  # change when the Node matrix does.
+  ci-result:
+    name: CI result
+    if: always()
+    needs: check
+    runs-on: ubuntu-latest
+    steps:
+      - run: test "${{ needs.check.result }}" = "success"

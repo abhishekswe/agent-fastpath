@@ -1,0 +1,42 @@
+name: Bug report
+description: Something behaves differently from the documentation.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Suspected security issue? Do not file it here. Use a [private security advisory](https://github.com/abhishekswe/agent-fastpath/security/advisories/new).
+        Never paste a live API key. Replace it with a synthetic value.
+  - type: input
+    id: version
+    attributes:
+      label: agent-fastpath version
+      description: Output of `npx agent-fastpath --version`
+    validations:
+      required: true
+  - type: input
+    id: client
+    attributes:
+      label: MCP client and OS
+      placeholder: Claude Code 2.x on macOS 15
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Reproduction
+      description: The tool call (tool name and arguments) and the full response, including traceId.
+      render: json
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected result
+    validations:
+      required: true
+  - type: textarea
+    id: doctor
+    attributes:
+      label: Output of `npx agent-fastpath doctor`
+      render: text

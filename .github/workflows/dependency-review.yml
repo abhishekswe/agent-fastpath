@@ -1,0 +1,19 @@
+name: Dependency review
+
+# Blocks pull requests that add dependencies with known high or critical
+# vulnerabilities.
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  dependency-review:
+    name: Dependency review
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: high
