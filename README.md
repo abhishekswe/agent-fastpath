@@ -13,7 +13,7 @@ Coding agents like Claude Code, Codex, and Cursor spend context and time on smal
 - **Says when it is unsure.** Every result is `accept`, `review`, or `escalate`, so your agent knows when to ask you.
 - **Safe browser.** Headless Playwright with SSRF protection and a gate on irreversible actions like delete or pay.
 
-Works with any MCP client, including Claude Code, Codex CLI, Cursor, OpenCode, Gemini CLI, Windsurf, and Cline.
+Works with any MCP client, with [setup guides](docs/configuration.md#clients) for Claude Code, Codex, Cursor, Google Antigravity, Gemini CLI, OpenCode, VS Code (GitHub Copilot), Cline, Zed, Amp, and Pi.
 
 ## Use cases
 
@@ -58,7 +58,23 @@ claude mcp add agent-fastpath -s user -e TYPESAFE_API_KEY=<key> -- npx -y agent-
 npx playwright install chromium   # only needed for the browser tool
 ```
 
-For Cursor, Codex, and all settings, see [configuration](docs/configuration.md). Check your setup with `npx agent-fastpath doctor`.
+For any other client, print its config with `npx agent-fastpath install-config <client>`:
+
+| Client | Command |
+| --- | --- |
+| Codex | `npx agent-fastpath install-config codex` |
+| Cursor | `npx agent-fastpath install-config cursor` |
+| Google Antigravity | `npx agent-fastpath install-config antigravity` |
+| Gemini CLI | `npx agent-fastpath install-config gemini-cli` |
+| OpenCode | `npx agent-fastpath install-config opencode` |
+| VS Code (GitHub Copilot) | `npx agent-fastpath install-config vscode` |
+| Cline | `npx agent-fastpath install-config cline` |
+| Zed | `npx agent-fastpath install-config zed` |
+| Amp | `npx agent-fastpath install-config amp` |
+| Pi | `npx agent-fastpath install-config pi` |
+| Anything else | `npx agent-fastpath install-config generic` |
+
+Full setup for each client and all settings: [configuration](docs/configuration.md). Check your setup with `npx agent-fastpath doctor`.
 
 Without an API key the server still runs: deterministic checks work, and semantic questions return `escalate` instead of guessing.
 
