@@ -5,6 +5,11 @@
 [![npm](https://img.shields.io/npm/v/agent-fastpath)](https://www.npmjs.com/package/agent-fastpath)
 [![CI](https://github.com/abhishekswe/agent-fastpath/actions/workflows/ci.yml/badge.svg)](https://github.com/abhishekswe/agent-fastpath/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+[![Website](https://img.shields.io/badge/website-agent--fastpath-38bdf8)](https://abhishekswe.github.io/agent-fastpath/)
+
+[![agent-fastpath website: how it decides, real example responses, and setup for 12 coding agents](docs/preview.png)](https://abhishekswe.github.io/agent-fastpath/)
+
+**Website:** [abhishekswe.github.io/agent-fastpath](https://abhishekswe.github.io/agent-fastpath/). See how it decides, real example responses, and setup for 12 coding agents.
 
 Coding agents like Claude Code, Codex, and Cursor spend context and time on small decisions: is this CI log ready to ship, which of these 40 files handle auth, did the page actually say "Order confirmed". agent-fastpath answers them with typed, calibrated results in milliseconds to a couple of seconds, and hands control back when it is not sure.
 

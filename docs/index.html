@@ -1,0 +1,1087 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>agent-fastpath: the Jev MCP server for coding agents</title>
+  <meta name="description" content="A Jev MCP server and fast decision layer for Claude Code, Codex, Cursor, and other coding agents: ship gates, risk checks, file triage, and safe browser checks with typed, calibrated answers." />
+  <link rel="canonical" href="https://abhishekswe.github.io/agent-fastpath/" />
+  <meta name="theme-color" content="#090a0d" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23111318'/%3E%3Cpath d='M18 4 8 18h7l-2 10 11-15h-7z' fill='%2338bdf8'/%3E%3C/svg%3E" />
+
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="agent-fastpath" />
+  <meta property="og:title" content="agent-fastpath: the Jev MCP server for coding agents" />
+  <meta property="og:description" content="Ship gates, risk checks, file triage, and safe browser checks for Claude Code, Codex, Cursor, and more. Rules first, then TypeSafe Jev, then a confidence gate." />
+  <meta property="og:url" content="https://abhishekswe.github.io/agent-fastpath/" />
+  <meta property="og:image" content="https://abhishekswe.github.io/agent-fastpath/preview.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="agent-fastpath: the Jev MCP server for coding agents" />
+  <meta name="twitter:description" content="A fast decision layer for coding agents, built on TypeSafe Jev. Typed, calibrated answers, and it hands control back when it is not sure." />
+  <meta name="twitter:image" content="https://abhishekswe.github.io/agent-fastpath/preview.png" />
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "agent-fastpath",
+    "description": "A Jev MCP server and fast decision layer for coding agents: ship gates, risk checks, file triage, and safe browser checks with typed, calibrated answers.",
+    "applicationCategory": "DeveloperApplication",
+    "operatingSystem": "macOS, Linux, Windows",
+    "softwareVersion": "0.2.0",
+    "license": "https://opensource.org/licenses/MIT",
+    "url": "https://abhishekswe.github.io/agent-fastpath/",
+    "downloadUrl": "https://www.npmjs.com/package/agent-fastpath",
+    "codeRepository": "https://github.com/abhishekswe/agent-fastpath",
+    "keywords": "Jev, TypeSafe, System One, MCP server, Model Context Protocol, Claude Code, Codex, Cursor, LLM-as-a-judge, coding agents",
+    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+  }
+  </script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg: #090a0d;
+      --surface: #111318;
+      --surface-hover: #16181f;
+      --surface-elevated: #1a1d25;
+      --surface-sunken: #0c0d11;
+      --border: #222631;
+      --border-focus: #3b4254;
+      --header-bg: rgba(9, 10, 13, 0.88);
+
+      --text: #f3f4f6;
+      --text-muted: #949ba8;
+      --text-faint: #848c9b;
+      --code-text: #cbd5e1;
+
+      --accent: #38bdf8;
+      --accent-muted: rgba(56, 189, 248, 0.12);
+      --accent-border: rgba(56, 189, 248, 0.28);
+      --success: #34d399;
+      --success-muted: rgba(52, 211, 153, 0.12);
+      --success-border: rgba(52, 211, 153, 0.28);
+      --warning: #fbbf24;
+      --warning-muted: rgba(251, 191, 36, 0.12);
+      --warning-border: rgba(251, 191, 36, 0.28);
+      --danger: #f87171;
+      --danger-muted: rgba(248, 113, 113, 0.12);
+      --danger-border: rgba(248, 113, 113, 0.28);
+
+      --btn-bg: #f3f4f6;
+      --btn-text: #090a0d;
+      --btn-hover: #e2e8f0;
+
+      --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      --font-mono: 'JetBrains Mono', ui-monospace, Menlo, Consolas, monospace;
+      --radius: 8px;
+      --radius-lg: 12px;
+      --transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      color-scheme: dark;
+    }
+
+    /* Light theme: follows the OS unless the visitor picked a theme. */
+    @media (prefers-color-scheme: light) {
+      :root:not([data-theme="dark"]) {
+        --bg: #f6f7f9; --surface: #ffffff; --surface-hover: #f1f3f6; --surface-elevated: #eef0f4;
+        --surface-sunken: #f3f4f7; --border: #e3e6eb; --border-focus: #c5cad3; --header-bg: rgba(246, 247, 249, 0.9);
+        --text: #0f1115; --text-muted: #4b5563; --text-faint: #5f6673; --code-text: #1f2937;
+        --accent: #0369a1; --accent-muted: rgba(3, 105, 161, 0.08); --accent-border: rgba(3, 105, 161, 0.3);
+        --success: #047857; --success-muted: rgba(4, 120, 87, 0.08); --success-border: rgba(4, 120, 87, 0.3);
+        --warning: #b45309; --warning-muted: rgba(180, 83, 9, 0.08); --warning-border: rgba(180, 83, 9, 0.3);
+        --danger: #b91c1c; --danger-muted: rgba(185, 28, 28, 0.07); --danger-border: rgba(185, 28, 28, 0.3);
+        --btn-bg: #0f1115; --btn-text: #ffffff; --btn-hover: #1f2937;
+        color-scheme: light;
+      }
+    }
+    :root[data-theme="light"] {
+      --bg: #f6f7f9; --surface: #ffffff; --surface-hover: #f1f3f6; --surface-elevated: #eef0f4;
+      --surface-sunken: #f3f4f7; --border: #e3e6eb; --border-focus: #c5cad3; --header-bg: rgba(246, 247, 249, 0.9);
+      --text: #0f1115; --text-muted: #4b5563; --text-faint: #5f6673; --code-text: #1f2937;
+      --accent: #0369a1; --accent-muted: rgba(3, 105, 161, 0.08); --accent-border: rgba(3, 105, 161, 0.3);
+      --success: #047857; --success-muted: rgba(4, 120, 87, 0.08); --success-border: rgba(4, 120, 87, 0.3);
+      --warning: #b45309; --warning-muted: rgba(180, 83, 9, 0.08); --warning-border: rgba(180, 83, 9, 0.3);
+      --danger: #b91c1c; --danger-muted: rgba(185, 28, 28, 0.07); --danger-border: rgba(185, 28, 28, 0.3);
+      --btn-bg: #0f1115; --btn-text: #ffffff; --btn-hover: #1f2937;
+      color-scheme: light;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: var(--font-sans);
+      line-height: 1.6;
+      font-size: 15px;
+      -webkit-font-smoothing: antialiased;
+    }
+    a { color: var(--text); text-decoration: none; transition: var(--transition); }
+    a:hover { color: var(--accent); }
+    code { font-family: var(--font-mono); font-size: 0.92em; }
+    :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+    button { font-family: inherit; }
+
+    .container { max-width: 1160px; margin: 0 auto; padding: 0 24px; }
+
+    /* Header */
+    header {
+      position: sticky; top: 0; z-index: 100;
+      background: var(--header-bg);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+    }
+    .nav-inner { display: flex; align-items: center; justify-content: space-between; height: 64px; gap: 16px; }
+    .brand { display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: 15px; letter-spacing: -0.3px; }
+    .brand-icon {
+      width: 26px; height: 26px; border-radius: 6px;
+      background: var(--surface-elevated); border: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: center; color: var(--accent);
+    }
+    .nav-links { display: flex; align-items: center; gap: 22px; list-style: none; }
+    .nav-links a { font-size: 13.5px; color: var(--text-muted); font-weight: 500; }
+    .nav-links a:hover { color: var(--text); }
+    .nav-actions { display: flex; align-items: center; gap: 8px; }
+    .btn-ghost {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-size: 12.5px; font-weight: 500; padding: 6px 12px;
+      border-radius: var(--radius); background: var(--surface); border: 1px solid var(--border);
+      color: var(--text); cursor: pointer; transition: var(--transition);
+    }
+    .btn-ghost:hover { background: var(--surface-hover); border-color: var(--border-focus); color: var(--text); }
+
+    /* Hero */
+    .hero { padding: 80px 0 64px; border-bottom: 1px solid var(--border); }
+    .hero-pre {
+      display: inline-flex; align-items: center; gap: 8px;
+      font-family: var(--font-mono); font-size: 12px; color: var(--accent);
+      background: var(--accent-muted); border: 1px solid var(--accent-border);
+      padding: 4px 10px; border-radius: 9999px; margin-bottom: 24px;
+    }
+    .hero-title { font-size: 46px; font-weight: 700; letter-spacing: -1.2px; line-height: 1.15; max-width: 840px; margin-bottom: 20px; }
+    .hero-lead { font-size: 18px; color: var(--text-muted); line-height: 1.6; max-width: 760px; margin-bottom: 28px; }
+    .hero-lead strong { color: var(--text); white-space: nowrap; }
+
+    .install-row { display: flex; align-items: stretch; gap: 10px; flex-wrap: wrap; margin-bottom: 40px; }
+    .install-cmd {
+      flex: 1 1 520px; min-width: 0;
+      display: flex; align-items: center; gap: 12px;
+      background: var(--surface-sunken); border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 10px 10px 10px 14px; font-family: var(--font-mono); font-size: 13px; color: var(--code-text);
+    }
+    .install-cmd code { flex: 1; overflow-x: auto; white-space: nowrap; }
+    .install-cmd .prompt { color: var(--text-faint); user-select: none; }
+    .btn-primary {
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+      background: var(--btn-bg); color: var(--btn-text); border: none;
+      padding: 10px 18px; font-size: 13.5px; font-weight: 600;
+      border-radius: var(--radius); cursor: pointer; transition: var(--transition); white-space: nowrap;
+    }
+    .btn-primary:hover { background: var(--btn-hover); color: var(--btn-text); }
+
+    .metrics-bar {
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px;
+      background: var(--border); border: 1px solid var(--border); border-radius: var(--radius-lg);
+      overflow: hidden; margin-bottom: 40px;
+    }
+    .metric-cell { background: var(--surface); padding: 22px 24px; }
+    .metric-val { font-family: var(--font-mono); font-size: 24px; font-weight: 600; letter-spacing: -0.5px; margin-bottom: 4px; }
+    .metric-label { font-size: 12px; color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; }
+
+    .terminal-box {
+      background: var(--surface-sunken); border: 1px solid var(--border); border-radius: var(--radius-lg);
+      overflow: hidden; font-family: var(--font-mono); font-size: 13px;
+    }
+    .terminal-bar {
+      display: flex; align-items: center; justify-content: space-between; gap: 12px;
+      padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--border);
+      color: var(--text-faint); font-size: 11.5px;
+    }
+    .terminal-dots { display: flex; gap: 6px; }
+    .terminal-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--border-focus); }
+    .terminal-body { display: grid; grid-template-columns: 1fr 1fr; }
+    .terminal-side { padding: 18px 20px; }
+    .terminal-side:first-child { border-right: 1px solid var(--border); }
+    .side-header { font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px; font-weight: 600; }
+    .side-header.bad { color: var(--danger); }
+    .side-header.good { color: var(--success); }
+    .terminal-line { line-height: 1.7; color: var(--text-muted); }
+    .terminal-line strong { color: var(--text); }
+    .terminal-foot { padding: 10px 16px; border-top: 1px solid var(--border); font-size: 11.5px; color: var(--text-faint); }
+    .terminal-foot a { color: var(--accent); }
+
+    /* Sections */
+    section.content-section { padding: 80px 0; border-bottom: 1px solid var(--border); }
+    .section-eyebrow { font-family: var(--font-mono); font-size: 12px; text-transform: uppercase; color: var(--accent); letter-spacing: 0.5px; margin-bottom: 8px; font-weight: 600; }
+    .section-heading { font-size: 30px; font-weight: 700; letter-spacing: -0.6px; margin-bottom: 12px; }
+    .section-sub { font-size: 16px; color: var(--text-muted); max-width: 680px; line-height: 1.6; margin-bottom: 40px; }
+    .fine-print { font-size: 12.5px; color: var(--text-faint); margin-top: 14px; }
+    .fine-print a { color: var(--accent); }
+
+    /* Pipeline */
+    .arch-flow-grid { display: grid; grid-template-columns: 1.3fr 1fr; gap: 24px; align-items: stretch; }
+    .flow-steps { display: flex; flex-direction: column; gap: 12px; }
+    .flow-card {
+      width: 100%; text-align: left; font: inherit; color: inherit;
+      background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; gap: 12px;
+      cursor: pointer; transition: var(--transition);
+    }
+    .flow-card:hover { background: var(--surface-hover); border-color: var(--border-focus); }
+    .flow-card[aria-pressed="true"] { background: var(--surface-elevated); border-color: var(--accent); }
+    .flow-card-left { display: flex; align-items: center; gap: 14px; min-width: 0; }
+    .flow-index {
+      flex: none; font-family: var(--font-mono); font-size: 12px; font-weight: 600;
+      width: 28px; height: 28px; border-radius: 6px; background: var(--bg); border: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: center; color: var(--text-muted);
+    }
+    .flow-card[aria-pressed="true"] .flow-index { border-color: var(--accent); color: var(--accent); }
+    .flow-name { font-size: 14.5px; font-weight: 600; color: var(--text); }
+    .flow-sub { font-size: 12.5px; color: var(--text-muted); }
+    .flow-badge {
+      flex: none; font-family: var(--font-mono); font-size: 11px; padding: 3px 8px; border-radius: 4px;
+      background: var(--surface-elevated); color: var(--text-muted); border: 1px solid var(--border); white-space: nowrap;
+    }
+    .flow-badge.fast { background: var(--success-muted); color: var(--success); border-color: var(--success-border); }
+
+    .inspector-card {
+      background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg);
+      padding: 24px; display: flex; flex-direction: column; min-width: 0;
+    }
+    .insp-header { padding-bottom: 16px; border-bottom: 1px solid var(--border); margin-bottom: 16px; }
+    .insp-title { font-size: 17px; font-weight: 600; margin-bottom: 4px; }
+    .insp-path { font-family: var(--font-mono); font-size: 12px; color: var(--accent); overflow-wrap: anywhere; }
+    .insp-content { display: flex; flex-direction: column; gap: 16px; flex: 1; }
+    .insp-desc { font-size: 13.5px; color: var(--text-muted); line-height: 1.6; }
+    .insp-checklist { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+    .insp-checklist li { font-size: 13px; display: flex; align-items: flex-start; gap: 8px; }
+    .insp-checklist li::before { content: '—'; color: var(--accent); }
+
+    .sim-label { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-faint); margin-bottom: 8px; }
+    .code-preview {
+      background: var(--surface-sunken); border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 14px; font-family: var(--font-mono); font-size: 12px; color: var(--code-text);
+      white-space: pre; overflow-x: auto; line-height: 1.55;
+    }
+
+    /* Examples */
+    .simulator-box { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
+    .sim-top-bar {
+      padding: 16px 20px; background: var(--surface-sunken); border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+    }
+    .preset-group { display: flex; gap: 8px; flex-wrap: wrap; }
+    .pill {
+      font-family: var(--font-mono); font-size: 12px; padding: 5px 12px; border-radius: var(--radius);
+      background: var(--surface); border: 1px solid var(--border); color: var(--text-muted);
+      cursor: pointer; transition: var(--transition);
+    }
+    .pill:hover { color: var(--text); border-color: var(--border-focus); }
+    .pill[aria-pressed="true"] { background: var(--accent-muted); border-color: var(--accent-border); color: var(--accent); font-weight: 500; }
+    .sim-tag { font-family: var(--font-mono); font-size: 12px; color: var(--text-faint); }
+
+    .sim-main-grid { display: grid; grid-template-columns: 1fr 1fr; }
+    .sim-input-col { padding: 24px; border-right: 1px solid var(--border); display: flex; flex-direction: column; min-width: 0; }
+    .sim-state {
+      background: var(--surface-sunken); border: 1px solid var(--border); border-radius: var(--radius);
+      color: var(--text); font-family: var(--font-mono); font-size: 13px; padding: 12px;
+      min-height: 140px; white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.5;
+    }
+    .sim-output-col { padding: 24px; display: flex; flex-direction: column; gap: 20px; background: var(--surface-sunken); min-width: 0; }
+
+    .verdict-header {
+      padding: 14px 16px; border-radius: var(--radius);
+      display: flex; align-items: center; justify-content: space-between; gap: 12px; border: 1px solid transparent;
+    }
+    .verdict-header.accept { background: var(--success-muted); border-color: var(--success-border); color: var(--success); }
+    .verdict-header.review { background: var(--warning-muted); border-color: var(--warning-border); color: var(--warning); }
+    .verdict-header.escalate { background: var(--accent-muted); border-color: var(--accent-border); color: var(--accent); }
+    .verdict-header.blocked { background: var(--danger-muted); border-color: var(--danger-border); color: var(--danger); }
+    .verdict-tag { font-family: var(--font-mono); font-size: 12px; font-weight: 700; text-transform: uppercase; padding: 2px 8px; border-radius: 4px; border: 1px solid currentColor; }
+    .verdict-title { font-size: 14.5px; font-weight: 600; font-family: var(--font-mono); }
+    .verdict-sub { font-size: 12px; color: var(--text-muted); }
+
+    .stage-badges-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+    .stage-pill-box { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 8px 10px; text-align: center; }
+    .stage-pill-box.active { border-color: var(--success-border); background: var(--success-muted); }
+    .stage-pill-box.skipped { opacity: 0.5; }
+    .stage-pill-title { font-size: 10px; text-transform: uppercase; color: var(--text-faint); font-weight: 600; }
+    .stage-pill-status { font-family: var(--font-mono); font-size: 11px; font-weight: 600; margin-top: 2px; }
+
+    /* Calculator */
+    .calc-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 32px; }
+    .calc-sliders { display: grid; grid-template-columns: repeat(3, 1fr); gap: 32px; margin-bottom: 32px; }
+    .calc-slider-block { display: flex; flex-direction: column; gap: 8px; }
+    .slider-info { display: flex; justify-content: space-between; gap: 8px; font-size: 13.5px; font-weight: 500; }
+    .slider-val-tag { font-family: var(--font-mono); color: var(--accent); font-weight: 600; white-space: nowrap; }
+    input[type="range"] { width: 100%; accent-color: var(--accent); }
+    .calc-comparison-box {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 20px; padding: 24px;
+      background: var(--surface-sunken); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 24px;
+    }
+    .comp-col-label { font-size: 13px; color: var(--text-muted); margin-bottom: 8px; font-weight: 500; }
+    .comp-meter-track { height: 36px; background: var(--surface); border-radius: 6px; border: 1px solid var(--border); overflow: hidden; display: flex; align-items: center; position: relative; }
+    .comp-meter-fill { height: 100%; transition: width 0.25s ease; }
+    .comp-meter-fill.bad { background: var(--danger-muted); border-right: 2px solid var(--danger); }
+    .comp-meter-fill.good { background: var(--success-muted); border-right: 2px solid var(--success); }
+    .comp-meter-text { position: absolute; left: 12px; font-family: var(--font-mono); font-size: 12.5px; font-weight: 600; }
+    .calc-summary-strip { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    .summary-stat-cell { background: var(--surface-sunken); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 20px; text-align: center; min-width: 0; }
+    .summary-stat-num { font-family: var(--font-mono); font-size: 22px; font-weight: 600; margin-bottom: 4px; overflow-wrap: anywhere; }
+    .summary-stat-title { font-size: 12px; color: var(--text-faint); text-transform: uppercase; font-weight: 600; letter-spacing: 0.5px; }
+
+    /* Thesis + FAQ */
+    .essay-grid { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 32px; }
+    .essay-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 28px; min-width: 0; }
+    .essay-card p { font-size: 14.5px; color: var(--text-muted); line-height: 1.7; margin-bottom: 20px; }
+    .essay-card p strong { color: var(--text); }
+    .table-wrap { overflow-x: auto; }
+    .comp-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .comp-table th { padding: 10px 12px; border-bottom: 1px solid var(--border); text-align: left; color: var(--text-faint); font-weight: 600; text-transform: uppercase; font-size: 11px; }
+    .comp-table td { padding: 12px; border-bottom: 1px solid var(--border); color: var(--text-muted); vertical-align: top; }
+    .comp-table tr:last-child td { border-bottom: none; }
+    .comp-table td strong { color: var(--text); }
+    .comp-table .yes { color: var(--success); font-weight: 500; }
+
+    .faq-list { display: flex; flex-direction: column; gap: 12px; }
+    .faq-item { background: var(--surface-sunken); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+    .faq-item summary {
+      padding: 14px 18px; font-weight: 600; font-size: 14px; cursor: pointer; list-style: none;
+      display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    }
+    .faq-item summary::-webkit-details-marker { display: none; }
+    .faq-item summary:hover { color: var(--accent); }
+    .faq-item summary::after { content: '▾'; font-size: 12px; color: var(--text-faint); transition: transform 0.2s ease; }
+    .faq-item[open] summary::after { transform: rotate(180deg); color: var(--accent); }
+    .faq-a { padding: 12px 18px 16px; font-size: 13.5px; color: var(--text-muted); line-height: 1.6; border-top: 1px solid var(--border); }
+    .faq-a code { color: var(--text); }
+
+    /* Compare */
+    .compare-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 8px 16px; }
+
+    /* Security */
+    .sec-cards-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+    .sec-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; }
+    .sec-card-title { font-size: 14.5px; font-weight: 600; margin-bottom: 8px; }
+    .sec-card-desc { font-size: 13px; color: var(--text-muted); line-height: 1.6; }
+
+    /* Setup */
+    .client-setup-container { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 24px; }
+    .client-buttons { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+    .code-display-wrap { position: relative; }
+    .btn-copy-code {
+      position: absolute; top: 10px; right: 10px; font-size: 11.5px; font-family: var(--font-mono);
+      background: var(--surface-elevated); border: 1px solid var(--border); color: var(--text-muted);
+      padding: 4px 8px; border-radius: 4px; cursor: pointer; transition: var(--transition);
+    }
+    .btn-copy-code:hover { color: var(--text); border-color: var(--border-focus); }
+    #client-code-output { padding-top: 40px; }
+    .reqs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 20px; }
+    .req { font-size: 13px; color: var(--text-muted); }
+    .req strong { display: block; color: var(--text); font-size: 13.5px; margin-bottom: 2px; }
+
+    /* Footer */
+    footer { padding: 48px 0; font-size: 13px; color: var(--text-faint); }
+    .footer-inner { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+    .footer-links { display: flex; gap: 18px; flex-wrap: wrap; }
+    .footer-links a { color: var(--text-muted); }
+
+    @media (max-width: 960px) {
+      .nav-links { display: none; }
+    }
+    @media (max-width: 860px) {
+      .hero { padding: 56px 0 48px; }
+      .hero-title { font-size: 32px; }
+      .hero-lead { font-size: 16.5px; }
+      .metrics-bar { grid-template-columns: 1fr 1fr; }
+      .terminal-body { grid-template-columns: 1fr; }
+      .terminal-side:first-child { border-right: none; border-bottom: 1px solid var(--border); }
+      .terminal-bar .scenario { display: none; }
+      .arch-flow-grid, .sim-main-grid, .calc-sliders, .calc-comparison-box, .essay-grid, .sec-cards-grid, .calc-summary-strip, .reqs { grid-template-columns: 1fr; }
+      .sim-input-col { border-right: none; border-bottom: 1px solid var(--border); }
+      .stage-badges-row { grid-template-columns: 1fr 1fr; }
+      section.content-section { padding: 56px 0; }
+      .section-heading { font-size: 25px; }
+    }
+    @media (max-width: 480px) {
+      .container { padding: 0 16px; }
+      .install-cmd { flex-basis: 100%; }
+      .btn-ghost .label { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="container nav-inner">
+      <a href="#" class="brand" aria-label="agent-fastpath home">
+        <span class="brand-icon" aria-hidden="true">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M13 2 3 14h7l-1 8 10-12h-7z"/></svg>
+        </span>
+        <span>agent-fastpath</span>
+      </a>
+
+      <ul class="nav-links">
+        <li><a href="#how-it-works">How it works</a></li>
+        <li><a href="#examples">Examples</a></li>
+        <li><a href="#benchmark">Benchmark</a></li>
+        <li><a href="#why">Why System One</a></li>
+        <li><a href="#compare">vs. plain Jev</a></li>
+        <li><a href="#security">Security</a></li>
+        <li><a href="#setup">Setup</a></li>
+      </ul>
+
+      <div class="nav-actions">
+        <button class="btn-ghost" id="theme-toggle" type="button" aria-label="Switch color theme">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M1 12h2M21 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"/></svg>
+        </button>
+        <a href="https://github.com/abhishekswe/agent-fastpath" target="_blank" rel="noopener noreferrer" class="btn-ghost">
+          <svg height="16" width="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+            <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/>
+          </svg>
+          <span class="label">GitHub</span>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <main>
+  <section class="hero">
+    <div class="container">
+      <div class="hero-pre">
+        <span>MCP server</span><span aria-hidden="true">•</span><span>built on TypeSafe Jev</span>
+      </div>
+
+      <h1 class="hero-title">The Jev MCP server for coding agents.</h1>
+
+      <p class="hero-lead">
+        A fast decision layer for Claude Code, Codex, Cursor, and nine more agents. <strong>agent-fastpath</strong> answers the small questions agents keep stopping on (is CI ready to ship, which files handle auth, is this command safe) with typed, calibrated results, and hands control back when it is not sure.
+      </p>
+
+      <div class="install-row">
+        <div class="install-cmd">
+          <span class="prompt" aria-hidden="true">$</span>
+          <code id="hero-cmd">claude mcp add agent-fastpath -s user -e TYPESAFE_API_KEY=&lt;key&gt; -- npx -y agent-fastpath start</code>
+          <button class="btn-ghost" type="button" data-copy-target="hero-cmd">Copy</button>
+        </div>
+        <a class="btn-primary" href="#setup">Other agents →</a>
+        <a class="btn-ghost" href="https://www.npmjs.com/package/agent-fastpath" target="_blank" rel="noopener noreferrer">npm</a>
+      </div>
+
+      <div class="metrics-bar">
+        <div class="metric-cell">
+          <div class="metric-val">98.8%</div>
+          <div class="metric-label">Less host context in file triage</div>
+        </div>
+        <div class="metric-cell">
+          <div class="metric-val">&lt; 1 ms</div>
+          <div class="metric-label">Rules decide clear cases</div>
+        </div>
+        <div class="metric-cell">
+          <div class="metric-val">~350 ms</div>
+          <div class="metric-label">Typical Jev decision</div>
+        </div>
+        <div class="metric-cell">
+          <div class="metric-val">3 states</div>
+          <div class="metric-label">Accept • Review • Escalate</div>
+        </div>
+      </div>
+
+      <div class="terminal-box">
+        <div class="terminal-bar">
+          <div class="terminal-dots" aria-hidden="true">
+            <span class="terminal-dot"></span><span class="terminal-dot"></span><span class="terminal-dot"></span>
+          </div>
+          <div class="scenario">triage 35 source files for "SSRF protection"</div>
+          <div>measured</div>
+        </div>
+        <div class="terminal-body">
+          <div class="terminal-side">
+            <div class="side-header bad">Agent reads the files itself</div>
+            <div class="terminal-line">Files read by the agent: <strong>35</strong></div>
+            <div class="terminal-line">Host context used: <strong>35,256 tokens</strong></div>
+          </div>
+          <div class="terminal-side">
+            <div class="side-header good">Agent calls fastpath_triage</div>
+            <div class="terminal-line">Host context used: <strong>408 tokens</strong> (98.8% less)</div>
+            <div class="terminal-line">Latency: <strong>2.9 s</strong></div>
+            <div class="terminal-line">Top hit: <strong>network_policy.ts</strong> (correct)</div>
+          </div>
+        </div>
+        <div class="terminal-foot">
+          Run on the agent-fastpath repository, September 2026. <a href="https://github.com/abhishekswe/agent-fastpath/blob/main/docs/benchmarking.md">Method and full results</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="how-it-works" class="content-section">
+    <div class="container">
+      <div class="section-eyebrow">How it works</div>
+      <h2 class="section-heading">Rules first, then Jev, then a confidence gate</h2>
+      <p class="section-sub">Clear-cut cases are decided by code without an API call. Everything else goes to TypeSafe Jev in one request, and a gate turns low-confidence answers into <code>review</code> or <code>escalate</code> instead of a guess. Select a stage to see what it does.</p>
+
+      <div class="arch-flow-grid">
+        <div class="flow-steps" id="flow-steps"></div>
+
+        <div class="inspector-card" aria-live="polite">
+          <div class="insp-header">
+            <h3 class="insp-title" id="stage-title"></h3>
+            <div class="insp-path" id="stage-path"></div>
+          </div>
+          <div class="insp-content">
+            <p class="insp-desc" id="stage-desc"></p>
+            <div>
+              <div class="sim-label">What it guarantees</div>
+              <ul class="insp-checklist" id="stage-checklist"></ul>
+            </div>
+            <div>
+              <div class="sim-label">From the source</div>
+              <div class="code-preview" id="stage-code"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="examples" class="content-section">
+    <div class="container">
+      <div class="section-eyebrow">Examples</div>
+      <h2 class="section-heading">Real responses</h2>
+      <p class="section-sub">Each example is a recorded response from agent-fastpath 0.2.0. The semantic ones were answered by TypeSafe Jev, so your confidence values will differ slightly.</p>
+
+      <div class="simulator-box">
+        <div class="sim-top-bar">
+          <div class="preset-group" id="example-pills" role="group" aria-label="Examples"></div>
+          <div class="sim-tag" id="example-tool"></div>
+        </div>
+
+        <div class="sim-main-grid">
+          <div class="sim-input-col">
+            <div class="sim-label">Input the agent sent</div>
+            <div class="sim-state" id="example-state"></div>
+          </div>
+
+          <div class="sim-output-col" aria-live="polite">
+            <div>
+              <div class="sim-label">Result</div>
+              <div class="verdict-header" id="example-verdict">
+                <div>
+                  <div class="verdict-title" id="example-decision"></div>
+                  <div class="verdict-sub" id="example-sub"></div>
+                </div>
+                <span class="verdict-tag" id="example-status"></span>
+              </div>
+            </div>
+
+            <div>
+              <div class="sim-label">Which stage decided</div>
+              <div class="stage-badges-row" id="example-stages"></div>
+            </div>
+
+            <div>
+              <div class="sim-label">Response</div>
+              <div class="code-preview" id="example-json" style="max-height: 220px; overflow-y: auto;"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="benchmark" class="content-section">
+    <div class="container">
+      <div class="section-eyebrow">Benchmark</div>
+      <h2 class="section-heading">Estimate the context you save</h2>
+      <p class="section-sub">Triage reads files on the server, so your agent only sees ranked results with short snippets. Move the sliders to estimate the saving for your repository.</p>
+
+      <div class="calc-card">
+        <div class="calc-sliders">
+          <div class="calc-slider-block">
+            <label class="slider-info" for="slider-files"><span>Files to triage</span><span class="slider-val-tag" id="calc-val-files"></span></label>
+            <input type="range" id="slider-files" min="5" max="500" value="35" />
+          </div>
+          <div class="calc-slider-block">
+            <label class="slider-info" for="slider-size"><span>Average file size</span><span class="slider-val-tag" id="calc-val-size"></span></label>
+            <input type="range" id="slider-size" min="200" max="4000" step="100" value="1000" />
+          </div>
+          <div class="calc-slider-block">
+            <label class="slider-info" for="slider-calls"><span>Triage calls per day</span><span class="slider-val-tag" id="calc-val-calls"></span></label>
+            <input type="range" id="slider-calls" min="1" max="100" value="10" />
+          </div>
+        </div>
+
+        <div class="calc-comparison-box">
+          <div>
+            <div class="comp-col-label">Agent reads every file</div>
+            <div class="comp-meter-track">
+              <div class="comp-meter-fill bad" style="width: 100%;"></div>
+              <span class="comp-meter-text" id="meter-host-text"></span>
+            </div>
+          </div>
+          <div>
+            <div class="comp-col-label">Agent reads the triage result</div>
+            <div class="comp-meter-track">
+              <div class="comp-meter-fill good" id="meter-fastpath"></div>
+              <span class="comp-meter-text" id="meter-fastpath-text"></span>
+            </div>
+          </div>
+        </div>
+
+        <div class="calc-summary-strip">
+          <div class="summary-stat-cell">
+            <div class="summary-stat-num" id="stat-per-call"></div>
+            <div class="summary-stat-title">Host tokens avoided per call</div>
+          </div>
+          <div class="summary-stat-cell">
+            <div class="summary-stat-num" id="stat-per-day"></div>
+            <div class="summary-stat-title">Host tokens avoided per day</div>
+          </div>
+          <div class="summary-stat-cell">
+            <div class="summary-stat-num" id="stat-pct"></div>
+            <div class="summary-stat-title">Less host context</div>
+          </div>
+        </div>
+
+        <p class="fine-print">
+          Estimate. It assumes the triage response stays near the measured 408 tokens (top 10 results with snippets). Measured result: 35 files, 35,256 tokens reduced to 408. Triage sends redacted excerpts of up to 4,000 characters per file to TypeSafe for scoring, so the saving is in your agent's context, not in data sent. <a href="https://github.com/abhishekswe/agent-fastpath/blob/main/docs/benchmarking.md">How it was measured</a>
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section id="why" class="content-section">
+    <div class="container">
+      <div class="section-eyebrow">Why a System One layer</div>
+      <h2 class="section-heading">Coding agents need fast reflexes, not only deep reasoning</h2>
+      <p class="section-sub">Your agent is good at slow, deliberate work. It is wasteful at the quick judgments in between. agent-fastpath takes those.</p>
+
+      <div class="essay-grid">
+        <div class="essay-card">
+          <p>
+            Many agent steps are small judgments: did the tests pass, which files matter, is this command safe, is this request contradictory. When the agent answers them itself it reads whole files and logs into its context, then reasons in free text. <strong>agent-fastpath answers them in one call</strong>: rules for the clear cases, <a href="https://typesafe.ai/blog/introducing-system-one-models-and-jev">TypeSafe Jev</a> for the rest, and a typed result the agent can act on.
+          </p>
+
+          <div class="sim-label">System 2 (your agent) vs. System 1 (agent-fastpath)</div>
+          <div class="table-wrap">
+            <table class="comp-table">
+              <thead>
+                <tr><th scope="col"></th><th scope="col">Your coding agent</th><th scope="col">agent-fastpath</th></tr>
+              </thead>
+              <tbody>
+                <tr><td><strong>Good at</strong></td><td>Planning, reasoning, writing code</td><td>Ship gates, triage, risk and ambiguity checks</td></tr>
+                <tr><td><strong>Speed</strong></td><td>Seconds per model turn</td><td>&lt; 1 ms (rules) to ~350 ms (Jev)</td></tr>
+                <tr><td><strong>Reads</strong></td><td>Whole files into its context</td><td>Files on the server; returns ranked snippets</td></tr>
+                <tr><td><strong>Answers with</strong></td><td>Free text</td><td>Typed decision, probabilities, and a status</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="essay-card">
+          <div class="sim-label">Questions</div>
+          <div class="faq-list">
+            <details class="faq-item" open>
+              <summary>Why not let the agent read the files itself?</summary>
+              <div class="faq-a">It works, but every file it reads stays in its context for the rest of the session and competes with your instructions. In the benchmark, triage cut the agent's context for the same task from 35,256 tokens to 408.</div>
+            </details>
+            <details class="faq-item">
+              <summary>Why not grep or a script?</summary>
+              <div class="faq-a">agent-fastpath does use exact rules first, and they answer in under a millisecond. Rules cannot judge meaning, like whether a requirement contradicts itself or whether a test run proves the change. Those go to Jev.</div>
+            </details>
+            <details class="faq-item">
+              <summary>What happens when it is not sure?</summary>
+              <div class="faq-a">
+                The confidence gate decides. Below 0.55 confidence the result is <code>escalate</code>: decide yourself or use a larger model. When the top two answers are within 0.15 of each other the result is <code>review</code>. Contradictory or vague requests return <code>ask_user</code>, risky commands return <code>review</code> with <code>ask_user</code>, and failing builds return <code>blocked</code> with <code>fix_and_retry</code>. You can tune the thresholds per call.
+              </div>
+            </details>
+            <details class="faq-item">
+              <summary>Does my code leave the machine?</summary>
+              <div class="faq-a">Rules run locally. Semantic questions send the redacted state to TypeSafe. Triage reads up to 64 KB per file inside the directories you allow and sends redacted excerpts of up to 4,000 characters per file for scoring. Traces stay in memory (the last 500) and are not written to disk. Do not triage files that must never leave the machine.</div>
+            </details>
+            <details class="faq-item">
+              <summary>Do I need a TypeSafe API key?</summary>
+              <div class="faq-a">For semantic questions, yes. Without a key the server still runs: rules still decide clear cases, and semantic questions return <code>escalate</code> instead of guessing.</div>
+            </details>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="compare" class="content-section">
+    <div class="container">
+      <div class="section-eyebrow">Compared with a plain Jev connector</div>
+      <h2 class="section-heading">More than a pipe to Jev</h2>
+      <p class="section-sub">A basic Jev MCP server passes your agent's questions to Jev and returns the answer. agent-fastpath adds what an agent needs to act on that answer safely.</p>
+
+      <div class="compare-card table-wrap">
+        <table class="comp-table">
+          <thead>
+            <tr><th scope="col"></th><th scope="col">Plain Jev connector</th><th scope="col">agent-fastpath</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><strong>Questions</strong></td><td>The agent writes question schemas</td><td class="yes">Presets: ship_gate, risk, severity, ambiguity, relevance, verify_claim, and more</td></tr>
+            <tr><td><strong>Clear cases</strong></td><td>Every call goes to the API</td><td class="yes">Rules decide failing builds, force pushes, and DROP TABLE in under 1 ms, with no API call</td></tr>
+            <tr><td><strong>Uncertain answers</strong></td><td>Raw probabilities; the agent decides</td><td class="yes">A gate returns accept, review, or escalate, with a recommended action</td></tr>
+            <tr><td><strong>Files</strong></td><td>The agent reads them first</td><td class="yes">Server-side triage; files stay out of the agent's context</td></tr>
+            <tr><td><strong>Web pages</strong></td><td>Not covered</td><td class="yes">Headless browser with SSRF blocking and an irreversible-action gate</td></tr>
+            <tr><td><strong>Audit</strong></td><td>Varies</td><td class="yes">Secret redaction and an evidence trace for every decision</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section id="security" class="content-section">
+    <div class="container">
+      <div class="section-eyebrow">Security</div>
+      <h2 class="section-heading">Safe by default</h2>
+      <p class="section-sub">Tool inputs, logs, and web pages can be hostile. You set the limits; tool callers can tighten them but never loosen them.</p>
+
+      <div class="sec-cards-grid">
+        <div class="sec-card">
+          <div class="sec-card-title">SSRF blocking</div>
+          <div class="sec-card-desc">The browser cannot reach localhost, private networks, or cloud metadata endpoints such as 169.254.169.254. Every connection, including redirects and page scripts, goes through a checking proxy.</div>
+        </div>
+        <div class="sec-card">
+          <div class="sec-card-title">Irreversible-action gate</div>
+          <div class="sec-card-desc">Elements labelled like delete, pay, checkout, publish, deploy, or merge are flagged. The browser will not click them unless the call sets <code>allowIrreversible: true</code>.</div>
+        </div>
+        <div class="sec-card">
+          <div class="sec-card-title">Bounded file reads</div>
+          <div class="sec-card-desc">Triage reads only inside the directories you allow, after resolving symlinks, and at most 64 KB per file.</div>
+        </div>
+        <div class="sec-card">
+          <div class="sec-card-title">Secret redaction</div>
+          <div class="sec-card-desc">TypeSafe, Anthropic, OpenAI, GitHub, AWS, and Slack keys, private keys, bearer tokens, and password fields are redacted before semantic requests and traces.</div>
+        </div>
+      </div>
+      <p class="fine-print">Details in the <a href="https://github.com/abhishekswe/agent-fastpath/blob/main/docs/security.md">security model</a>. Report vulnerabilities privately through <a href="https://github.com/abhishekswe/agent-fastpath/security/advisories/new">GitHub security advisories</a>.</p>
+    </div>
+  </section>
+
+  <section id="setup" class="content-section" style="border-bottom: none;">
+    <div class="container">
+      <div class="section-eyebrow">Setup</div>
+      <h2 class="section-heading">Connect your coding agent</h2>
+      <p class="section-sub">Pick your agent and copy the config. You can also print it with <code>npx agent-fastpath install-config &lt;agent&gt;</code>.</p>
+
+      <div class="client-setup-container">
+        <div class="client-buttons" id="client-pills" role="group" aria-label="Coding agent"></div>
+        <div class="code-display-wrap">
+          <button class="btn-copy-code" type="button" data-copy-target="client-code-output">Copy</button>
+          <div class="code-preview" id="client-code-output"></div>
+        </div>
+        <div class="reqs">
+          <div class="req"><strong>Node.js 20.12+</strong>Runs through <code>npx</code>; nothing else to install.</div>
+          <div class="req"><strong>TypeSafe API key</strong>Needed for semantic questions. Rules work without it.</div>
+          <div class="req"><strong>Chromium (optional)</strong><code>npx playwright install chromium</code> for the browser tool.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+  </main>
+
+  <footer>
+    <div class="container footer-inner">
+      <div><strong>agent-fastpath</strong> • MIT License • Built on TypeSafe Jev and the Model Context Protocol</div>
+      <nav class="footer-links" aria-label="Footer">
+        <a href="https://github.com/abhishekswe/agent-fastpath">GitHub</a>
+        <a href="https://www.npmjs.com/package/agent-fastpath">npm</a>
+        <a href="https://github.com/abhishekswe/agent-fastpath/blob/main/docs/configuration.md">Docs</a>
+        <a href="https://github.com/abhishekswe/agent-fastpath/blob/main/CHANGELOG.md">Changelog</a>
+      </nav>
+    </div>
+  </footer>
+
+  <script>
+    // Theme: explicit choice wins over the OS setting. Storage can be unavailable.
+    (function initTheme() {
+      const root = document.documentElement;
+      try {
+        const saved = localStorage.getItem('fastpath-theme');
+        if (saved === 'light' || saved === 'dark') root.dataset.theme = saved;
+      } catch (e) { /* storage blocked: follow the OS */ }
+      document.getElementById('theme-toggle').addEventListener('click', () => {
+        const current = root.dataset.theme ||
+          (matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+        const next = current === 'light' ? 'dark' : 'light';
+        root.dataset.theme = next;
+        try { localStorage.setItem('fastpath-theme', next); } catch (e) { /* ignore */ }
+      });
+    })();
+
+    // Copy buttons: data-copy-target names the element whose text is copied.
+    document.addEventListener('click', async (ev) => {
+      const btn = ev.target.closest('[data-copy-target]');
+      if (!btn) return;
+      const text = document.getElementById(btn.dataset.copyTarget).innerText;
+      const original = btn.textContent;
+      try {
+        await navigator.clipboard.writeText(text);
+        btn.textContent = 'Copied';
+      } catch (e) {
+        btn.textContent = 'Select and copy';
+      }
+      setTimeout(() => { btn.textContent = original; }, 1800);
+    });
+
+    // Radio-style button group: marks one button pressed and calls onPick(key).
+    function buildPills(container, items, className, onPick) {
+      container.innerHTML = '';
+      items.forEach(([key, label], i) => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = className;
+        b.textContent = label;
+        b.setAttribute('aria-pressed', i === 0 ? 'true' : 'false');
+        b.addEventListener('click', () => {
+          container.querySelectorAll('button').forEach((x) => x.setAttribute('aria-pressed', 'false'));
+          b.setAttribute('aria-pressed', 'true');
+          onPick(key);
+        });
+        container.appendChild(b);
+      });
+      onPick(items[0][0]);
+    }
+
+    // Pipeline stages. Code excerpts are taken from the source files named in `path`.
+    const STAGES = [
+      {
+        name: 'Your coding agent', sub: 'Claude Code, Codex, Cursor, Antigravity, Pi, and any MCP client', badge: 'MCP stdio',
+        title: 'Your coding agent', path: 'any MCP client',
+        desc: 'When the agent hits a small judgment (is this ready to ship, which files matter, is this safe), it calls an agent-fastpath tool over MCP instead of working it out in its own context.',
+        guarantees: ['Standard MCP over stdio; no changes to your agent', 'Setup for 12 agents via install-config', 'Five tools: evaluate, triage, browser, evidence, capabilities'],
+        code: `{
+  "tool": "fastpath_evaluate",
+  "arguments": {
+    "preset": "ship_gate",
+    "state": "Tests: 24 passed, 24 total"
+  }
+}`
+      },
+      {
+        name: 'Redaction and limits', sub: 'Secrets redacted; triage reads only allowed roots, 64 KB per file', badge: 'always on',
+        title: 'Redaction and limits', path: 'packages/core/src/policies/deterministic_engine.ts',
+        desc: 'Before anything is judged or sent, recognized secrets are replaced with placeholders. Triage checks every path against the roots you allowed and reads at most 64 KB per file.',
+        guarantees: ['Callers cannot turn redaction off', 'Paths outside allowed roots are refused', 'Limits can be tightened per call, never loosened'],
+        code: `const SECRET_PATTERNS = [
+  { name: 'Private Key Block', ... },
+  { name: 'TypeSafe API Key', ... },
+  { name: 'Anthropic API Key', ... },
+  { name: 'OpenAI API Key', ... },
+  { name: 'GitHub Token', ... },
+  { name: 'AWS Access Key', ... },
+  { name: 'Slack Token', ... },
+  { name: 'Generic Bearer Token', ... },
+  { name: 'Secret Assignment', ... },
+  { name: 'Password Field', ... }
+];`
+      },
+      {
+        name: 'Rules first', sub: 'Test summaries, rm -rf, git push --force, DROP TABLE', badge: '< 1 ms', fast: true,
+        title: 'Deterministic rules', path: 'packages/core/src/policies/deterministic_engine.ts',
+        desc: 'Clear-cut cases are decided in code: a test summary with failures blocks the ship gate, a clean one passes it, and destructive commands are flagged as high risk. No API call is made. A diff with a green test summary is never auto-passed; it goes to Jev.',
+        guarantees: ['No API call for clear cases', 'Answers in under a millisecond', 'Diffs always get a semantic review'],
+        code: `const destructivePatterns = [
+  /\\brm\\s+-rf\\s+(?:\\/|\\*|~\\/|\\.\\/)/i,
+  /\\bgit\\s+push\\s+.*--force\\b/i,
+  /\\bgit\\s+reset\\s+--hard\\b/i,
+  /\\bDROP\\s+(?:TABLE|DATABASE|SCHEMA)\\b/i,
+  /\\bTRUNCATE\\s+TABLE\\b/i,
+  /\\bDELETE\\s+FROM\\s+\\w+\\s*(?:;|$)(?!.*\\bWHERE\\b)/i
+];`
+      },
+      {
+        name: 'TypeSafe Jev', sub: 'Choice, score, or yes/no probability in one request', badge: '~350 ms',
+        title: 'TypeSafe Jev (System One model)', path: 'packages/provider-typesafe/src/client.ts',
+        desc: 'Everything else goes to Jev, TypeSafe\'s System One model. It does not write text; it returns typed answers with probabilities for each question the preset asks.',
+        guarantees: ['Typed answers only: a choice, a 0-based score, or a yes/no probability', 'All of a preset\'s questions in a single request', 'Without an API key, semantic questions escalate'],
+        code: `type Question =
+  | { type: 'choice'; instructions: string; criteria: Record<string, string> }
+  | { type: 'score';  instructions: string; criteria: string[] }  // 0-based
+  | { type: 'noul';   instructions: string };                     // P(yes)`
+      },
+      {
+        name: 'Confidence gate', sub: 'Accept at 0.75, escalate below 0.55, review on near ties', badge: 'tunable',
+        title: 'Confidence gate', path: 'packages/core/src/confidence/escalation_gate.ts',
+        desc: 'The gate turns Jev\'s answers into a status your agent can act on. Low confidence escalates, near ties go to review, and only confident answers are accepted.',
+        guarantees: ['escalate below 0.55 confidence', 'review when the top two answers are within 0.15', 'accept at 0.75 or above; thresholds are tunable per call'],
+        code: `if (minConfidence < escalationThreshold)      // 0.55
+  return { status: 'escalate', recommendedAction: 'fallback_large_model' };
+if (minObservedMargin < minMargin)             // 0.15
+  return { status: 'review', recommendedAction: 'inspect_evidence' };
+if (minConfidence >= threshold)                // 0.75
+  return { status: 'accept', recommendedAction: 'proceed' };
+return { status: 'review', recommendedAction: 'inspect_evidence' };`
+      },
+      {
+        name: 'Evidence trace', sub: 'Every decision is explainable by traceId', badge: 'last 500',
+        title: 'Evidence trace', path: 'packages/core/src/evidence/evidence_store.ts',
+        desc: 'Every call records the questions asked, the full probability distributions, and the gate decision. Ask for it later with fastpath_evidence.',
+        guarantees: ['Kept in memory, not written to disk', 'Holds the last 500 calls', 'Redacted like everything else'],
+        code: `{
+  "tool": "fastpath_evidence",
+  "arguments": { "traceId": "trc_b08bf82d1c1552a8", "detailLevel": "full" }
+}`
+      }
+    ];
+
+    function renderStage(i) {
+      const s = STAGES[i];
+      document.getElementById('stage-title').textContent = s.title;
+      document.getElementById('stage-path').textContent = s.path;
+      document.getElementById('stage-desc').textContent = s.desc;
+      document.getElementById('stage-code').textContent = s.code;
+      const list = document.getElementById('stage-checklist');
+      list.innerHTML = '';
+      s.guarantees.forEach((g) => { const li = document.createElement('li'); li.textContent = g; list.appendChild(li); });
+    }
+
+    (function buildStages() {
+      const wrap = document.getElementById('flow-steps');
+      STAGES.forEach((s, i) => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'flow-card';
+        b.setAttribute('aria-pressed', i === 0 ? 'true' : 'false');
+        b.innerHTML = `<span class="flow-card-left"><span class="flow-index">${i}</span><span><span class="flow-name"></span><br><span class="flow-sub"></span></span></span><span class="flow-badge${s.fast ? ' fast' : ''}"></span>`;
+        b.querySelector('.flow-name').textContent = s.name;
+        b.querySelector('.flow-sub').textContent = s.sub;
+        b.querySelector('.flow-badge').textContent = s.badge;
+        b.addEventListener('click', () => {
+          wrap.querySelectorAll('.flow-card').forEach((x) => x.setAttribute('aria-pressed', 'false'));
+          b.setAttribute('aria-pressed', 'true');
+          renderStage(i);
+        });
+        wrap.appendChild(b);
+      });
+      renderStage(0);
+    })();
+
+    // Recorded responses (metrics omitted). Stage order: redact, rules, Jev, gate.
+    const EXAMPLES = {
+      ship_pass: {
+        label: 'Ship gate: clean', tool: 'fastpath_evaluate · ship_gate',
+        state: 'PASS tests/unit/auth.test.ts\nTests: 24 passed, 24 total\nTime: 1.45s',
+        sub: 'Decided by a rule, no API call',
+        stages: [['Redact', 'clean', 1], ['Rules', 'matched', 1], ['Jev', 'not called', 0], ['Gate', 'accept', 1]],
+        json: { status: 'accept', decision: 'READY_TO_SHIP', confidence: 0.99, answers: {}, reasonCode: 'DETERMINISTIC_TEST_SUCCESS_VERIFIED', recommendedAction: 'proceed', traceId: 'trc_12ff729cf686334a' }
+      },
+      ship_fail: {
+        label: 'Ship gate: failing', tool: 'fastpath_evaluate · ship_gate',
+        state: 'FAIL tests/e2e/checkout.test.ts\nTests: 1 failed, 23 passed, 24 total',
+        sub: 'Decided by a rule, no API call',
+        stages: [['Redact', 'clean', 1], ['Rules', 'matched', 1], ['Jev', 'not called', 0], ['Gate', 'blocked', 1]],
+        json: { status: 'blocked', decision: 'BLOCKED', confidence: 1, answers: {}, reasonCode: 'DETERMINISTIC_TEST_FAILURE_DETECTED', recommendedAction: 'fix_and_retry', traceId: 'trc_6ac94fe6a0389080' }
+      },
+      risk_drop: {
+        label: 'Risk: DROP TABLE', tool: 'fastpath_evaluate · risk',
+        state: 'DROP TABLE users CASCADE;',
+        sub: 'Destructive pattern, asks the user',
+        stages: [['Redact', 'clean', 1], ['Rules', 'matched', 1], ['Jev', 'not called', 0], ['Gate', 'review', 1]],
+        json: { status: 'review', decision: 'HIGH_RISK', confidence: 1, answers: {}, reasonCode: 'DETERMINISTIC_DESTRUCTIVE_PATTERN_DETECTED', recommendedAction: 'ask_user', traceId: 'trc_67e409775b2a7aa9' }
+      },
+      risk_safe: {
+        label: 'Risk: test command', tool: 'fastpath_evaluate · risk',
+        state: 'npm run test:unit -- --watch=false',
+        sub: 'No rule matched, answered by Jev',
+        stages: [['Redact', 'clean', 1], ['Rules', 'no match', 0], ['Jev', 'answered', 1], ['Gate', 'accept', 1]],
+        json: { status: 'accept', decision: 'ACCEPTABLE_RISK', reasonCode: 'RISK_GATE_CLEAR', recommendedAction: 'proceed', confidence: 0.96, margin: 1, answers: { risk_rating: { choice: 'safe', confidence: 1, probabilities: { high: 0, destructive: 0, safe: 1, medium: 0 }, margin: 1, runnerUp: 'high' }, is_irreversible: { noul: 0.04, answer: false, confidence: 0.96 } }, traceId: 'trc_f2dbf07c14fcd37a' }
+      },
+      ambiguity: {
+        label: 'Ambiguity', tool: 'fastpath_evaluate · ambiguity',
+        state: 'Update the user record immediately, but defer all database writes until midnight.',
+        sub: 'Contradictory request, asks the user',
+        stages: [['Redact', 'clean', 1], ['Rules', 'no match', 0], ['Jev', 'answered', 1], ['Gate', 'escalate', 1]],
+        json: { status: 'escalate', decision: true, reasonCode: 'AMBIGUITY_DETECTED', recommendedAction: 'ask_user', confidence: 0.72, margin: 0.69, answers: { is_ambiguous: { noul: 0.84, answer: true, confidence: 0.84 }, ambiguity_type: { choice: 'contradictory', confidence: 0.72, probabilities: { underspecified: 0.1, contradictory: 0.79, missing_context: 0.1, none: 0.01 }, margin: 0.69, runnerUp: 'underspecified' } }, traceId: 'trc_b08bf82d1c1552a8' }
+      },
+      ssrf: {
+        label: 'Browser: metadata URL', tool: 'fastpath_browser · open',
+        state: '{ "mode": "open", "url": "http://169.254.169.254/latest/meta-data/" }',
+        sub: 'Blocked before any connection was made',
+        stages: [['URL policy', 'blocked', 1], ['Browser', 'not opened', 0], ['Jev', 'not called', 0], ['Result', 'blocked', 1]],
+        json: { status: 'blocked', errorCode: 'SSRF_PROHIBITED', message: "Navigation to 'http://169.254.169.254/latest/meta-data/' was blocked by SSRF policy: Access to loopback or private network (169.254.169.254) is prohibited.", details: { targetUrl: 'http://169.254.169.254/latest/meta-data/', reason: 'Access to loopback or private network (169.254.169.254) is prohibited.' } }
+      }
+    };
+
+    function renderExample(key) {
+      const ex = EXAMPLES[key];
+      const verdict = document.getElementById('example-verdict');
+      verdict.className = 'verdict-header ' + ex.json.status;
+      document.getElementById('example-tool').textContent = ex.tool;
+      document.getElementById('example-state').textContent = ex.state;
+      document.getElementById('example-decision').textContent = String(ex.json.decision ?? ex.json.errorCode);
+      document.getElementById('example-sub').textContent = ex.sub;
+      document.getElementById('example-status').textContent = ex.json.status;
+      const row = document.getElementById('example-stages');
+      row.innerHTML = '';
+      ex.stages.forEach(([title, status, used]) => {
+        const d = document.createElement('div');
+        d.className = 'stage-pill-box ' + (used ? 'active' : 'skipped');
+        d.innerHTML = '<div class="stage-pill-title"></div><div class="stage-pill-status"></div>';
+        d.querySelector('.stage-pill-title').textContent = title;
+        d.querySelector('.stage-pill-status').textContent = status;
+        row.appendChild(d);
+      });
+      document.getElementById('example-json').textContent = JSON.stringify(ex.json, null, 2);
+    }
+
+    buildPills(document.getElementById('example-pills'),
+      Object.entries(EXAMPLES).map(([k, v]) => [k, v.label]), 'pill', renderExample);
+
+    // Savings estimate. The triage response is roughly constant (top 10 results).
+    const TRIAGE_RESPONSE_TOKENS = 408;
+    function recalc() {
+      const files = +document.getElementById('slider-files').value;
+      const size = +document.getElementById('slider-size').value;
+      const calls = +document.getElementById('slider-calls').value;
+      const host = files * size;
+      const saved = Math.max(0, host - TRIAGE_RESPONSE_TOKENS);
+      const pct = host > 0 ? (saved / host) * 100 : 0;
+
+      document.getElementById('calc-val-files').textContent = files + ' files';
+      document.getElementById('calc-val-size').textContent = size.toLocaleString() + ' tokens';
+      document.getElementById('calc-val-calls').textContent = calls + (calls === 1 ? ' call' : ' calls');
+      document.getElementById('meter-host-text').textContent = host.toLocaleString() + ' tokens';
+      document.getElementById('meter-fastpath-text').textContent = '≈ ' + TRIAGE_RESPONSE_TOKENS + ' tokens';
+      document.getElementById('meter-fastpath').style.width = Math.min(100, Math.max(1.5, 100 - pct)).toFixed(1) + '%';
+      document.getElementById('stat-per-call').textContent = saved.toLocaleString();
+      document.getElementById('stat-per-day').textContent = (saved * calls).toLocaleString();
+      document.getElementById('stat-pct').textContent = pct.toFixed(1) + '%';
+    }
+    ['slider-files', 'slider-size', 'slider-calls'].forEach((id) =>
+      document.getElementById(id).addEventListener('input', recalc));
+    recalc();
+
+    // Install snippets, generated from `npx agent-fastpath install-config <agent>`.
+    const CLIENTS = {
+  "claude-code": "claude mcp add agent-fastpath -s user -e TYPESAFE_API_KEY=<your-typesafe-api-key> -- npx -y agent-fastpath start",
+  "codex": "Add to ~/.codex/config.toml:\n\n[mcp_servers.agent-fastpath]\ncommand = \"npx\"\nargs = [\"-y\", \"agent-fastpath\", \"start\"]\nenv = { TYPESAFE_API_KEY = \"<your-typesafe-api-key>\" }",
+  "cursor": "Add to ~/.cursor/mcp.json:\n\n{\n  \"mcpServers\": {\n    \"agent-fastpath\": {\n      \"command\": \"npx\",\n      \"args\": [\n        \"-y\",\n        \"agent-fastpath\",\n        \"start\"\n      ],\n      \"env\": {\n        \"TYPESAFE_API_KEY\": \"<your-typesafe-api-key>\"\n      }\n    }\n  }\n}",
+  "antigravity": "Add to ~/.gemini/config/mcp_config.json, then restart Antigravity:\n\n{\n  \"mcpServers\": {\n    \"agent-fastpath\": {\n      \"command\": \"npx\",\n      \"args\": [\n        \"-y\",\n        \"agent-fastpath\",\n        \"start\"\n      ],\n      \"env\": {\n        \"TYPESAFE_API_KEY\": \"<your-typesafe-api-key>\"\n      }\n    }\n  }\n}",
+  "gemini-cli": "gemini mcp add -s user -e TYPESAFE_API_KEY=<your-typesafe-api-key> agent-fastpath npx -y agent-fastpath start",
+  "opencode": "Add to ~/.config/opencode/opencode.json:\n\n{\n  \"$schema\": \"https://opencode.ai/config.json\",\n  \"mcp\": {\n    \"agent-fastpath\": {\n      \"type\": \"local\",\n      \"command\": [\n        \"npx\",\n        \"-y\",\n        \"agent-fastpath\",\n        \"start\"\n      ],\n      \"enabled\": true,\n      \"environment\": {\n        \"TYPESAFE_API_KEY\": \"<your-typesafe-api-key>\"\n      }\n    }\n  }\n}",
+  "vscode": "Add to .vscode/mcp.json in your workspace:\n\n{\n  \"servers\": {\n    \"agent-fastpath\": {\n      \"type\": \"stdio\",\n      \"command\": \"npx\",\n      \"args\": [\n        \"-y\",\n        \"agent-fastpath\",\n        \"start\"\n      ],\n      \"env\": {\n        \"TYPESAFE_API_KEY\": \"<your-typesafe-api-key>\"\n      }\n    }\n  }\n}",
+  "cline": "In Cline, open MCP Servers > Configure MCP Servers and add:\n\n{\n  \"mcpServers\": {\n    \"agent-fastpath\": {\n      \"command\": \"npx\",\n      \"args\": [\n        \"-y\",\n        \"agent-fastpath\",\n        \"start\"\n      ],\n      \"env\": {\n        \"TYPESAFE_API_KEY\": \"<your-typesafe-api-key>\"\n      }\n    }\n  }\n}",
+  "zed": "Add to your Zed settings.json:\n\n{\n  \"context_servers\": {\n    \"agent-fastpath\": {\n      \"command\": \"npx\",\n      \"args\": [\n        \"-y\",\n        \"agent-fastpath\",\n        \"start\"\n      ],\n      \"env\": {\n        \"TYPESAFE_API_KEY\": \"<your-typesafe-api-key>\"\n      }\n    }\n  }\n}",
+  "amp": "Add to your Amp settings.json:\n\n{\n  \"amp.mcpServers\": {\n    \"agent-fastpath\": {\n      \"command\": \"npx\",\n      \"args\": [\n        \"-y\",\n        \"agent-fastpath\",\n        \"start\"\n      ],\n      \"env\": {\n        \"TYPESAFE_API_KEY\": \"<your-typesafe-api-key>\"\n      }\n    }\n  }\n}",
+  "pi": "Pi reads MCP servers through pi-mcp-adapter. Install it with `pi install npm:pi-mcp-adapter`, then add to ~/.pi/agent/mcp.json:\n\n{\n  \"mcpServers\": {\n    \"agent-fastpath\": {\n      \"command\": \"npx\",\n      \"args\": [\n        \"-y\",\n        \"agent-fastpath\",\n        \"start\"\n      ],\n      \"env\": {\n        \"TYPESAFE_API_KEY\": \"<your-typesafe-api-key>\"\n      }\n    }\n  }\n}",
+  "generic": "Add to your client's MCP config file:\n\n{\n  \"mcpServers\": {\n    \"agent-fastpath\": {\n      \"command\": \"npx\",\n      \"args\": [\n        \"-y\",\n        \"agent-fastpath\",\n        \"start\"\n      ],\n      \"env\": {\n        \"TYPESAFE_API_KEY\": \"<your-typesafe-api-key>\"\n      }\n    }\n  }\n}"
+};
+    const CLIENT_LABELS = {
+      'claude-code': 'Claude Code', codex: 'Codex', cursor: 'Cursor', antigravity: 'Antigravity',
+      'gemini-cli': 'Gemini CLI', opencode: 'OpenCode', vscode: 'VS Code (Copilot)', cline: 'Cline',
+      zed: 'Zed', amp: 'Amp', pi: 'Pi', generic: 'Other MCP client'
+    };
+    buildPills(document.getElementById('client-pills'),
+      Object.keys(CLIENT_LABELS).map((k) => [k, CLIENT_LABELS[k]]), 'pill',
+      (key) => { document.getElementById('client-code-output').textContent = CLIENTS[key]; });
+  </script>
+</body>
+</html>
