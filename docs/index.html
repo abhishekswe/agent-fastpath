@@ -1,0 +1,1929 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>agent-fastpath — The Fast Decision Layer for Coding Agents</title>
+  <meta name="description" content="A Jev MCP server and decision layer for coding agents: ship gates, risk checks, file triage, and safe browser automation with typed, calibrated answers." />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg: #090a0d;
+      --surface: #111318;
+      --surface-hover: #16181f;
+      --surface-elevated: #1a1d25;
+      --border: #222631;
+      --border-focus: #3b4254;
+
+      --text: #f3f4f6;
+      --text-muted: #949ba8;
+      --text-faint: #5a6272;
+
+      --accent: #38bdf8;
+      --accent-muted: rgba(56, 189, 248, 0.12);
+      --accent-border: rgba(56, 189, 248, 0.28);
+
+      --success: #34d399;
+      --success-muted: rgba(52, 211, 153, 0.12);
+      --success-border: rgba(52, 211, 153, 0.28);
+
+      --warning: #fbbf24;
+      --warning-muted: rgba(251, 191, 36, 0.12);
+      --warning-border: rgba(251, 191, 36, 0.28);
+
+      --danger: #f87171;
+      --danger-muted: rgba(248, 113, 113, 0.12);
+      --danger-border: rgba(248, 113, 113, 0.28);
+
+      --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      --font-mono: 'JetBrains Mono', ui-monospace, Menlo, Consolas, monospace;
+      --radius: 8px;
+      --radius-lg: 12px;
+      --transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      scroll-behavior: smooth;
+      color-scheme: dark;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: var(--font-sans);
+      line-height: 1.6;
+      font-size: 15px;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    a {
+      color: var(--text);
+      text-decoration: none;
+      transition: var(--transition);
+    }
+    a:hover {
+      color: var(--accent);
+    }
+
+    .container {
+      max-width: 1160px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    /* Header */
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(9, 10, 13, 0.88);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .nav-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 64px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 600;
+      font-size: 15px;
+      letter-spacing: -0.3px;
+    }
+
+    .brand-icon {
+      width: 26px;
+      height: 26px;
+      border-radius: 6px;
+      background: #1c202a;
+      border: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--accent);
+      font-size: 13px;
+      font-family: var(--font-mono);
+      font-weight: 700;
+    }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 24px;
+      list-style: none;
+    }
+
+    .nav-links a {
+      font-size: 13.5px;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+    .nav-links a:hover {
+      color: var(--text);
+    }
+
+    .btn-github {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12.5px;
+      font-weight: 500;
+      padding: 6px 12px;
+      border-radius: var(--radius);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      transition: var(--transition);
+    }
+    .btn-github:hover {
+      background: var(--surface-hover);
+      border-color: var(--border-focus);
+    }
+
+    /* Hero */
+    .hero {
+      padding: 88px 0 64px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .hero-pre {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--accent);
+      background: var(--accent-muted);
+      border: 1px solid var(--accent-border);
+      padding: 4px 10px;
+      border-radius: 9999px;
+      margin-bottom: 24px;
+    }
+
+    .hero-title {
+      font-size: 46px;
+      font-weight: 700;
+      letter-spacing: -1.2px;
+      line-height: 1.15;
+      max-width: 840px;
+      margin-bottom: 20px;
+    }
+
+    .hero-lead {
+      font-size: 18px;
+      color: var(--text-muted);
+      line-height: 1.6;
+      max-width: 760px;
+      margin-bottom: 40px;
+    }
+
+    /* Hero Metrics Bar */
+    .metrics-bar {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1px;
+      background: var(--border);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      margin-bottom: 40px;
+    }
+
+    .metric-cell {
+      background: var(--surface);
+      padding: 22px 24px;
+    }
+
+    .metric-val {
+      font-family: var(--font-mono);
+      font-size: 24px;
+      font-weight: 600;
+      color: var(--text);
+      letter-spacing: -0.5px;
+      margin-bottom: 4px;
+    }
+
+    .metric-label {
+      font-size: 12px;
+      color: var(--text-faint);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      font-weight: 600;
+    }
+
+    /* Terminal Comparison */
+    .terminal-box {
+      background: #0c0d11;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      font-family: var(--font-mono);
+      font-size: 13px;
+    }
+
+    .terminal-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 16px;
+      background: #111317;
+      border-bottom: 1px solid var(--border);
+      color: var(--text-faint);
+      font-size: 11.5px;
+    }
+
+    .terminal-dots {
+      display: flex;
+      gap: 6px;
+    }
+    .terminal-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #252934;
+    }
+
+    .terminal-body {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      divide-x: 1px solid var(--border);
+    }
+
+    .terminal-side {
+      padding: 18px 20px;
+    }
+
+    .terminal-side:first-child {
+      border-right: 1px solid var(--border);
+    }
+
+    .side-header {
+      font-size: 11.5px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 12px;
+      font-weight: 600;
+    }
+    .side-header.bad { color: var(--danger); }
+    .side-header.good { color: var(--success); }
+
+    .terminal-line {
+      line-height: 1.7;
+      color: #9ca3af;
+    }
+    .terminal-line strong {
+      color: #fff;
+    }
+
+    /* Section Styles */
+    section.content-section {
+      padding: 80px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .section-eyebrow {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      text-transform: uppercase;
+      color: var(--accent);
+      letter-spacing: 0.5px;
+      margin-bottom: 8px;
+      font-weight: 600;
+    }
+
+    .section-heading {
+      font-size: 30px;
+      font-weight: 700;
+      letter-spacing: -0.6px;
+      margin-bottom: 12px;
+    }
+
+    .section-sub {
+      font-size: 16px;
+      color: var(--text-muted);
+      max-width: 680px;
+      line-height: 1.6;
+      margin-bottom: 40px;
+    }
+
+    /* Architecture Flow (Refined Timeline Layout) */
+    .arch-flow-grid {
+      display: grid;
+      grid-template-columns: 1.3fr 1fr;
+      gap: 24px;
+      align-items: stretch;
+    }
+
+    .flow-steps {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .flow-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      transition: var(--transition);
+    }
+
+    .flow-card:hover {
+      background: var(--surface-hover);
+      border-color: var(--border-focus);
+    }
+
+    .flow-card.active {
+      background: #141822;
+      border-color: var(--accent);
+    }
+
+    .flow-card-left {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .flow-index {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 600;
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      background: #090a0d;
+      border: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-muted);
+    }
+
+    .flow-card.active .flow-index {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .flow-name {
+      font-size: 14.5px;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .flow-sub {
+      font-size: 12.5px;
+      color: var(--text-muted);
+    }
+
+    .flow-badge {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      padding: 3px 8px;
+      border-radius: 4px;
+      background: var(--surface-elevated);
+      color: var(--text-muted);
+      border: 1px solid var(--border);
+    }
+    .flow-badge.fast {
+      background: var(--success-muted);
+      color: var(--success);
+      border-color: var(--success-border);
+    }
+
+    .inspector-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+    }
+
+    .insp-header {
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 16px;
+    }
+    .insp-title {
+      font-size: 17px;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 4px;
+    }
+    .insp-path {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--accent);
+    }
+
+    .insp-content {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      flex: 1;
+    }
+    .insp-desc {
+      font-size: 13.5px;
+      color: var(--text-muted);
+      line-height: 1.6;
+    }
+
+    .insp-checklist {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .insp-checklist li {
+      font-size: 13px;
+      color: var(--text);
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+    }
+    .insp-checklist li::before {
+      content: '—';
+      color: var(--accent);
+    }
+
+    .code-preview {
+      background: #090a0d;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: #cbd5e1;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+
+    /* Decision Simulator (Console-style) */
+    .simulator-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+    }
+
+    .sim-top-bar {
+      padding: 16px 20px;
+      background: #0d0f14;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .preset-group {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .preset-pill {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      padding: 5px 12px;
+      border-radius: var(--radius);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: var(--transition);
+    }
+    .preset-pill:hover {
+      color: var(--text);
+      border-color: var(--border-focus);
+    }
+    .preset-pill.active {
+      background: var(--accent-muted);
+      border-color: var(--accent-border);
+      color: var(--accent);
+      font-weight: 500;
+    }
+
+    .sim-main-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+    }
+
+    .sim-input-col {
+      padding: 24px;
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .sim-label {
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-faint);
+    }
+
+    .sim-textarea {
+      background: #090a0d;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      font-family: var(--font-mono);
+      font-size: 13px;
+      padding: 12px;
+      min-height: 140px;
+      resize: vertical;
+      line-height: 1.5;
+    }
+    .sim-textarea:focus {
+      outline: none;
+      border-color: var(--border-focus);
+    }
+
+    .btn-action {
+      background: var(--text);
+      color: #000;
+      border: none;
+      padding: 10px 18px;
+      font-size: 13.5px;
+      font-weight: 600;
+      border-radius: var(--radius);
+      cursor: pointer;
+      transition: var(--transition);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    .btn-action:hover {
+      background: #e2e8f0;
+    }
+
+    .sim-output-col {
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      background: #0e1015;
+    }
+
+    .verdict-header {
+      padding: 14px 16px;
+      border-radius: var(--radius);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border: 1px solid transparent;
+    }
+
+    .verdict-header.accept {
+      background: var(--success-muted);
+      border-color: var(--success-border);
+      color: var(--success);
+    }
+    .verdict-header.review {
+      background: var(--warning-muted);
+      border-color: var(--warning-border);
+      color: var(--warning);
+    }
+    .verdict-header.escalate {
+      background: var(--danger-muted);
+      border-color: var(--danger-border);
+      color: var(--danger);
+    }
+
+    .verdict-tag {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      padding: 2px 8px;
+      border-radius: 4px;
+      background: rgba(0, 0, 0, 0.3);
+    }
+
+    .verdict-title {
+      font-size: 14.5px;
+      font-weight: 600;
+    }
+
+    .stage-badges-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+    }
+
+    .stage-pill-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 8px 10px;
+      text-align: center;
+    }
+    .stage-pill-box.active {
+      border-color: var(--success-border);
+      background: var(--success-muted);
+    }
+    .stage-pill-box.bypassed {
+      opacity: 0.4;
+    }
+
+    .stage-pill-title {
+      font-size: 10px;
+      text-transform: uppercase;
+      color: var(--text-faint);
+      font-weight: 600;
+    }
+    .stage-pill-status {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text);
+      margin-top: 2px;
+    }
+
+    /* Calculator */
+    .calc-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 32px;
+    }
+
+    .calc-sliders {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 32px;
+      margin-bottom: 32px;
+    }
+
+    .calc-slider-block {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .slider-info {
+      display: flex;
+      justify-content: space-between;
+      font-size: 13.5px;
+      font-weight: 500;
+    }
+    .slider-val-tag {
+      font-family: var(--font-mono);
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      height: 4px;
+      background: #252a36;
+      border-radius: 2px;
+      outline: none;
+      -webkit-appearance: none;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--accent);
+      cursor: pointer;
+    }
+
+    .calc-comparison-box {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      padding: 24px;
+      background: #0a0b0e;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      margin-bottom: 24px;
+    }
+
+    .comp-col-label {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+      font-weight: 500;
+    }
+
+    .comp-meter-track {
+      height: 36px;
+      background: #151820;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+    }
+
+    .comp-meter-fill {
+      height: 100%;
+      padding: 0 12px;
+      display: flex;
+      align-items: center;
+      font-family: var(--font-mono);
+      font-size: 12.5px;
+      font-weight: 600;
+      transition: width 0.25s ease;
+    }
+    .comp-meter-fill.bad {
+      background: rgba(248, 113, 113, 0.2);
+      border-right: 2px solid var(--danger);
+      color: #fca5a5;
+    }
+    .comp-meter-fill.good {
+      background: rgba(52, 211, 153, 0.2);
+      border-right: 2px solid var(--success);
+      color: #6ee7b7;
+    }
+
+    .calc-summary-strip {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+    }
+
+    .summary-stat-cell {
+      background: #0f1116;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px 20px;
+      text-align: center;
+    }
+    .summary-stat-num {
+      font-family: var(--font-mono);
+      font-size: 22px;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 4px;
+    }
+    .summary-stat-title {
+      font-size: 12px;
+      color: var(--text-faint);
+      text-transform: uppercase;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+
+    /* Pitch / Essay Section */
+    .essay-grid {
+      display: grid;
+      grid-template-columns: 1.1fr 0.9fr;
+      gap: 32px;
+    }
+
+    .essay-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 28px;
+    }
+
+    .soundbite-quote {
+      border-left: 2px solid var(--accent);
+      padding: 16px 20px;
+      background: #0c0e12;
+      border-radius: 0 var(--radius) var(--radius) 0;
+      font-size: 14.5px;
+      line-height: 1.7;
+      color: #e2e8f0;
+      margin-bottom: 24px;
+    }
+
+    .comp-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+      margin-top: 16px;
+    }
+    .comp-table th {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+      text-align: left;
+      color: var(--text-faint);
+      font-weight: 600;
+      text-transform: uppercase;
+      font-size: 11px;
+    }
+    .comp-table td {
+      padding: 12px;
+      border-bottom: 1px solid var(--border);
+      color: var(--text-muted);
+    }
+    .comp-table tr:last-child td {
+      border-bottom: none;
+    }
+    .comp-table td strong {
+      color: var(--text);
+    }
+
+    /* FAQ / Objection Accordions */
+    .faq-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .faq-item {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      transition: var(--transition);
+    }
+
+    .faq-q {
+      padding: 14px 18px;
+      font-weight: 600;
+      font-size: 14px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      user-select: none;
+    }
+    .faq-q:hover {
+      color: var(--accent);
+    }
+
+    .faq-toggle {
+      font-size: 11px;
+      color: var(--text-faint);
+      transition: transform 0.2s ease;
+    }
+    .faq-item.open .faq-toggle {
+      transform: rotate(180deg);
+      color: var(--accent);
+    }
+
+    .faq-a {
+      display: none;
+      padding: 0 18px 16px 18px;
+      font-size: 13.5px;
+      color: var(--text-muted);
+      line-height: 1.6;
+      border-top: 1px solid rgba(255, 255, 255, 0.04);
+      padding-top: 12px;
+    }
+    .faq-item.open .faq-a {
+      display: block;
+    }
+
+    /* Security Grid */
+    .sec-cards-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+    }
+
+    .sec-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+    }
+    .sec-card-title {
+      font-size: 14.5px;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: var(--text);
+    }
+    .sec-card-desc {
+      font-size: 13px;
+      color: var(--text-muted);
+      line-height: 1.6;
+    }
+
+    /* Client Install Snippet */
+    .client-setup-container {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 24px;
+    }
+
+    .client-buttons {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 16px;
+    }
+
+    .client-tab-btn {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      padding: 6px 14px;
+      border-radius: var(--radius);
+      background: #090a0d;
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: var(--transition);
+    }
+    .client-tab-btn:hover {
+      border-color: var(--border-focus);
+      color: var(--text);
+    }
+    .client-tab-btn.active {
+      background: var(--surface-elevated);
+      border-color: var(--accent);
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    .code-display-wrap {
+      position: relative;
+    }
+
+    .btn-copy-code {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      font-size: 11.5px;
+      font-family: var(--font-mono);
+      background: #1e222c;
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      padding: 4px 8px;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: var(--transition);
+    }
+    .btn-copy-code:hover {
+      color: var(--text);
+      background: #282e3c;
+    }
+
+    /* Footer */
+    footer {
+      padding: 48px 0;
+      border-top: 1px solid var(--border);
+      font-size: 13px;
+      color: var(--text-faint);
+    }
+    .footer-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    @media (max-width: 860px) {
+      .hero-title { font-size: 32px; }
+      .metrics-bar { grid-template-columns: 1fr 1fr; }
+      .terminal-body { grid-template-columns: 1fr; }
+      .arch-flow-grid, .sim-main-grid, .calc-sliders, .calc-comparison-box, .essay-grid, .sec-cards-grid { grid-template-columns: 1fr; }
+      .nav-links { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Navigation -->
+  <header>
+    <div class="container nav-inner">
+      <a href="#" class="brand">
+        <div class="brand-icon">⚡</div>
+        <span>agent-fastpath</span>
+      </a>
+
+      <ul class="nav-links">
+        <li><a href="#architecture">Architecture</a></li>
+        <li><a href="#simulator">Simulator</a></li>
+        <li><a href="#benchmarks">Benchmark</a></li>
+        <li><a href="#thesis">Pitch & Thesis</a></li>
+        <li><a href="#security">Security</a></li>
+        <li><a href="#setup">Setup</a></li>
+      </ul>
+
+      <a href="https://github.com/abhishekswe/agent-fastpath" target="_blank" rel="noopener noreferrer" class="btn-github">
+        <svg height="16" width="16" viewBox="0 0 16 16" fill="currentColor">
+          <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/>
+        </svg>
+        <span>GitHub</span>
+      </a>
+    </div>
+  </header>
+
+  <!-- Hero Section -->
+  <section class="hero">
+    <div class="container">
+      <div class="hero-pre">
+        <span>MCP Server</span>
+        <span>•</span>
+        <span>TypeSafe Jev System One</span>
+      </div>
+
+      <h1 class="hero-title">
+        A fast decision layer for coding agents.
+      </h1>
+
+      <p class="hero-lead">
+        Coding agents spend context and seconds deciding routine micro-questions: is CI ready to ship? Which 3 files handle auth? Is this command safe? <strong>agent-fastpath</strong> resolves them in milliseconds with typed, calibrated probabilities—and steps aside when unsure.
+      </p>
+
+      <!-- Key Metrics Strip -->
+      <div class="metrics-bar">
+        <div class="metric-cell">
+          <div class="metric-val">98.8%</div>
+          <div class="metric-label">Host Context Saved</div>
+        </div>
+        <div class="metric-cell">
+          <div class="metric-val">&lt; 1 ms</div>
+          <div class="metric-label">Deterministic Rules</div>
+        </div>
+        <div class="metric-cell">
+          <div class="metric-val">~300 ms</div>
+          <div class="metric-label">System One Latency</div>
+        </div>
+        <div class="metric-cell">
+          <div class="metric-val">Tri-State</div>
+          <div class="metric-label">Accept • Review • Escalate</div>
+        </div>
+      </div>
+
+      <!-- Comparison Terminal Box -->
+      <div class="terminal-box">
+        <div class="terminal-bar">
+          <div class="terminal-dots">
+            <span class="terminal-dot"></span>
+            <span class="terminal-dot"></span>
+            <span class="terminal-dot"></span>
+          </div>
+          <div>scenario: file triage for "SSRF protection" (35 repository files)</div>
+          <div>benchmark run</div>
+        </div>
+        <div class="terminal-body">
+          <div class="terminal-side">
+            <div class="side-header bad">Without fastpath (Host reads files)</div>
+            <div class="terminal-line">Host context read: <strong>35,256 tokens</strong></div>
+            <div class="terminal-line">Wall-clock latency: <strong>8,400 ms</strong></div>
+            <div class="terminal-line">Host attention: <strong>diluted across 35 files</strong></div>
+            <div class="terminal-line">Cost per triage: <strong>~$0.11 (Claude 3.7)</strong></div>
+          </div>
+          <div class="terminal-side">
+            <div class="side-header good">With agent-fastpath (Server triage)</div>
+            <div class="terminal-line">Host context read: <strong>408 tokens</strong> (98.8% saved)</div>
+            <div class="terminal-line">Wall-clock latency: <strong>2,900 ms</strong></div>
+            <div class="terminal-line">Host attention: <strong>focused solely on top hit</strong></div>
+            <div class="terminal-line">Cost per triage: <strong>&lt; $0.001</strong></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section 1: Architecture Pipeline -->
+  <section id="architecture" class="content-section">
+    <div class="container">
+      <div class="section-eyebrow">Execution Pipeline</div>
+      <h2 class="section-heading">How agent-fastpath decides</h2>
+      <p class="section-sub">Every evaluation follows a deterministic-first order: exact code patterns resolve in under a millisecond, fuzzy questions dispatch to TypeSafe Jev, and a confidence gate enforces safety.</p>
+
+      <div class="arch-flow-grid">
+        <!-- Interactive Step Selector -->
+        <div class="flow-steps">
+          
+          <div class="flow-card active" onclick="selectFlowStage(0)">
+            <div class="flow-card-left">
+              <div class="flow-index">0</div>
+              <div>
+                <div class="flow-name">Host Coding Agent</div>
+                <div class="flow-sub">Claude Code, Cursor, Codex, Antigravity, OpenCode</div>
+              </div>
+            </div>
+            <span class="flow-badge">stdio MCP</span>
+          </div>
+
+          <div class="flow-card" onclick="selectFlowStage(1)">
+            <div class="flow-card-left">
+              <div class="flow-index">1</div>
+              <div>
+                <div class="flow-name">Stage 1: Secret Redaction & Bounds Guard</div>
+                <div class="flow-sub">Masks AWS, GitHub, Slack tokens; enforces 64KB read cap</div>
+              </div>
+            </div>
+            <span class="flow-badge fast">&lt; 0.2 ms</span>
+          </div>
+
+          <div class="flow-card" onclick="selectFlowStage(2)">
+            <div class="flow-card-left">
+              <div class="flow-index">2</div>
+              <div>
+                <div class="flow-name">Stage 2: Deterministic Engine (Rules First)</div>
+                <div class="flow-sub">Pure TS regex: CI test output, rm -rf, DROP TABLE, OOM crashes</div>
+              </div>
+            </div>
+            <span class="flow-badge fast">&lt; 1 ms</span>
+          </div>
+
+          <div class="flow-card" onclick="selectFlowStage(3)">
+            <div class="flow-card-left">
+              <div class="flow-index">3</div>
+              <div>
+                <div class="flow-name">Stage 3: TypeSafe Jev (System One Model)</div>
+                <div class="flow-sub">Micro-model judgment: noul (yes/no), score (0-4), choice distributions</div>
+              </div>
+            </div>
+            <span class="flow-badge">~300 ms</span>
+          </div>
+
+          <div class="flow-card" onclick="selectFlowStage(4)">
+            <div class="flow-card-left">
+              <div class="flow-index">4</div>
+              <div>
+                <div class="flow-name">Stage 4: Confidence & Escalation Gate</div>
+                <div class="flow-sub">Threshold checks: 0.75 (accept) | 0.55 (escalate) | 0.15 min margin</div>
+              </div>
+            </div>
+            <span class="flow-badge fast">&lt; 0.1 ms</span>
+          </div>
+
+          <div class="flow-card" onclick="selectFlowStage(5)">
+            <div class="flow-card-left">
+              <div class="flow-index">5</div>
+              <div>
+                <div class="flow-name">Egress: In-Memory Ephemeral Trace Store</div>
+                <div class="flow-sub">500 traces in RAM; auditable via fastpath_evidence</div>
+              </div>
+            </div>
+            <span class="flow-badge">Logged</span>
+          </div>
+
+        </div>
+
+        <!-- Inspector Display -->
+        <div class="inspector-card">
+          <div class="insp-header">
+            <h3 class="insp-title" id="stage-title">Host Coding Agent</h3>
+            <div class="insp-path" id="stage-path">packages/mcp-server</div>
+          </div>
+          <div class="insp-content">
+            <p class="insp-desc" id="stage-desc">
+              Any MCP-compliant coding assistant. Instead of blowing 35,000 tokens reading raw files or deliberating over trivial logs, the host calls agent-fastpath via standard stdio JSON-RPC.
+            </p>
+
+            <div>
+              <div class="sim-label" style="margin-bottom: 8px;">Guarantees & Invariants</div>
+              <ul class="insp-checklist" id="stage-checklist">
+                <li>Compatible with 10+ MCP clients (Claude Code, Cursor, Codex, Antigravity, OpenCode).</li>
+                <li>Zero modifications needed to agent system reasoning prompts.</li>
+                <li>Reduces host agent context load by up to 98.8%.</li>
+              </ul>
+            </div>
+
+            <div>
+              <div class="sim-label" style="margin-bottom: 8px;">Code Signature</div>
+              <div class="code-preview" id="stage-code">{
+  "jsonrpc": "2.0",
+  "method": "tools/call",
+  "params": {
+    "name": "fastpath_evaluate",
+    "arguments": {
+      "preset": "ship_gate",
+      "state": "CI run: 45 passed, 0 failed"
+    }
+  }
+}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section 2: Interactive Decision Simulator -->
+  <section id="simulator" class="content-section">
+    <div class="container">
+      <div class="section-eyebrow">Interactive Simulator</div>
+      <h2 class="section-heading">Try the Decision Pipeline</h2>
+      <p class="section-sub">Select a preset or edit the state directly to see how queries flow through deterministic regex checks, Jev inference, and the confidence gate.</p>
+
+      <div class="simulator-box">
+        <div class="sim-top-bar">
+          <div class="preset-group">
+            <button class="preset-pill active" onclick="loadConsolePreset('ship_pass')">Ship Gate (Clean)</button>
+            <button class="preset-pill" onclick="loadConsolePreset('ship_fail')">Ship Gate (Broken)</button>
+            <button class="preset-pill" onclick="loadConsolePreset('risk_drop')">Risk (DROP TABLE)</button>
+            <button class="preset-pill" onclick="loadConsolePreset('risk_safe')">Risk (Safe Test)</button>
+            <button class="preset-pill" onclick="loadConsolePreset('ambiguity')">Ambiguity Check</button>
+            <button class="preset-pill" onclick="loadConsolePreset('ssrf')">Browser SSRF Gate</button>
+          </div>
+          <div style="font-family: var(--font-mono); font-size: 12px; color: var(--text-faint);" id="sim-active-preset-tag">
+            preset: ship_gate
+          </div>
+        </div>
+
+        <div class="sim-main-grid">
+          <!-- Left: Input Area -->
+          <div class="sim-input-col">
+            <div class="sim-label">Input State / Log / Natural Language</div>
+            <textarea id="console-state-input" class="sim-textarea" placeholder="Paste CI log, command, or requirement here..."></textarea>
+            
+            <button class="btn-action" onclick="runConsoleSim()">
+              <span>Execute Decision</span>
+              <span>→</span>
+            </button>
+          </div>
+
+          <!-- Right: Output Area -->
+          <div class="sim-output-col">
+            <div>
+              <div class="sim-label" style="margin-bottom: 8px;">Gate Outcome</div>
+              <div class="verdict-header accept" id="console-verdict-box">
+                <div>
+                  <div class="verdict-title" id="console-verdict-title">READY_TO_SHIP</div>
+                  <div style="font-size: 12px; color: var(--text-muted);" id="console-verdict-sub">Deterministic Rule Passed • &lt; 1 ms</div>
+                </div>
+                <span class="verdict-tag" id="console-verdict-tag">ACCEPT</span>
+              </div>
+            </div>
+
+            <div>
+              <div class="sim-label" style="margin-bottom: 8px;">Stage Resolution</div>
+              <div class="stage-badges-row">
+                <div class="stage-pill-box active" id="pill-stage-0">
+                  <div class="stage-pill-title">1. Redact</div>
+                  <div class="stage-pill-status">CLEAN</div>
+                </div>
+                <div class="stage-pill-box active" id="pill-stage-1">
+                  <div class="stage-pill-title">2. Rules</div>
+                  <div class="stage-pill-status">MATCHED</div>
+                </div>
+                <div class="stage-pill-box bypassed" id="pill-stage-2">
+                  <div class="stage-pill-title">3. Jev</div>
+                  <div class="stage-pill-status">BYPASS</div>
+                </div>
+                <div class="stage-pill-box active" id="pill-stage-3">
+                  <div class="stage-pill-title">4. Gate</div>
+                  <div class="stage-pill-status">PASSED</div>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <div class="sim-label" style="margin-bottom: 8px;">MCP JSON Response Envelope</div>
+              <div class="code-preview" id="console-json-box" style="max-height: 160px; overflow-y: auto;"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section 3: Context Benchmark Math -->
+  <section id="benchmarks" class="content-section">
+    <div class="container">
+      <div class="section-eyebrow">Quantitative Benchmarks</div>
+      <h2 class="section-heading">Context avoided and latency saved</h2>
+      <p class="section-sub">Path triage reads files inside the server and sends bounded, redacted excerpts to Jev for relevance scoring. The host agent receives only short, structured snippets.</p>
+
+      <div class="calc-card">
+        <div class="calc-sliders">
+          <div class="calc-slider-block">
+            <div class="slider-info">
+              <span>Candidate Files for Triage</span>
+              <span class="slider-val-tag" id="calc-val-files">35 files</span>
+            </div>
+            <input type="range" id="slider-files" min="5" max="250" value="35" oninput="recalcBenchmarks()" />
+          </div>
+
+          <div class="calc-slider-block">
+            <div class="slider-info">
+              <span>Avg File Size (Tokens)</span>
+              <span class="slider-val-tag" id="calc-val-size">1,000 tokens</span>
+            </div>
+            <input type="range" id="slider-size" min="200" max="4000" step="100" value="1000" oninput="recalcBenchmarks()" />
+          </div>
+
+          <div class="calc-slider-block">
+            <div class="slider-info">
+              <span>Decisions Per Day</span>
+              <span class="slider-val-tag" id="calc-val-decisions">40 decisions</span>
+            </div>
+            <input type="range" id="slider-decisions" min="5" max="200" value="40" oninput="recalcBenchmarks()" />
+          </div>
+        </div>
+
+        <div class="calc-comparison-box">
+          <div>
+            <div class="comp-col-label">Host Agent Direct Reads (Without fastpath)</div>
+            <div class="comp-meter-track">
+              <div class="comp-meter-fill bad" id="comp-meter-host" style="width: 100%;">35,256 tokens</div>
+            </div>
+          </div>
+
+          <div>
+            <div class="comp-col-label">agent-fastpath Triage Result (With fastpath)</div>
+            <div class="comp-meter-track">
+              <div class="comp-meter-fill good" id="comp-meter-fastpath" style="width: 1.5%;">408 tokens</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="calc-summary-strip">
+          <div class="summary-stat-cell">
+            <div class="summary-stat-num" id="stat-daily-tokens">1,394,000</div>
+            <div class="summary-stat-title">Tokens Saved Daily</div>
+          </div>
+          <div class="summary-stat-cell">
+            <div class="summary-stat-num" id="stat-daily-time">~6.8 mins</div>
+            <div class="summary-stat-title">Agent Turnaround Time Saved</div>
+          </div>
+          <div class="summary-stat-cell">
+            <div class="summary-stat-num">98.8%</div>
+            <div class="summary-stat-title">Context Window Preserved</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section 4: Pitch & Thesis -->
+  <section id="thesis" class="content-section">
+    <div class="container">
+      <div class="section-eyebrow">The System 1 Thesis</div>
+      <h2 class="section-heading">Why coding agents need a reflex layer</h2>
+      <p class="section-sub">A mental model and talk track for discussing agentctl-fastpath with colleagues, users, and teams.</p>
+
+      <div class="essay-grid">
+        <!-- Essay Left -->
+        <div class="essay-card">
+          <div class="sim-label" style="margin-bottom: 10px;">The 30-Second Talk Track</div>
+          <div class="soundbite-quote">
+            "Coding agents are brilliant at deep reasoning, but terrible at reflexes. They burn 35,000 tokens of context and 10 seconds of time answering tiny questions like <em>'Did this test pass?'</em> or <em>'Which file defines this route?'</em>.<br/><br/>
+            <strong>agent-fastpath</strong> is an MCP-native decision layer. It gives coding agents a <strong>System One reflex arc</strong>: instant regex rules in &lt;1ms, micro-model judgments via TypeSafe Jev in 300ms, and a calibrated confidence gate that knows when to say <em>'I am not sure, ask the human.'</em> It cuts context bloat by 98% and prevents agents from guessing."
+          </div>
+
+          <div class="sim-label" style="margin-bottom: 10px;">System 1 (Reflex) vs. System 2 (Reasoning)</div>
+          <table class="comp-table">
+            <thead>
+              <tr>
+                <th>Attribute</th>
+                <th>System 2 (Host Agent)</th>
+                <th>System 1 (agent-fastpath)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Role</strong></td>
+                <td>Architectural reasoning, writing code</td>
+                <td>Triage, ship gates, risk checks</td>
+              </tr>
+              <tr>
+                <td><strong>Latency</strong></td>
+                <td>5,000 ms – 15,000 ms</td>
+                <td>&lt; 1 ms (rules) to 300 ms (Jev)</td>
+              </tr>
+              <tr>
+                <td><strong>Input Cost</strong></td>
+                <td>Reads full source files (35k+ tokens)</td>
+                <td>Bounded excerpts (~400 tokens)</td>
+              </tr>
+              <tr>
+                <td><strong>Answer Type</strong></td>
+                <td>Freeform chat text</td>
+                <td>Calibrated probabilities & tri-state</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- FAQ Right -->
+        <div class="essay-card">
+          <div class="sim-label" style="margin-bottom: 12px;">Anticipated Questions & Objections</div>
+          <div class="faq-list">
+            
+            <div class="faq-item open">
+              <div class="faq-q" onclick="toggleFaq(this)">
+                <span>Why not just prompt Claude or GPT-4o?</span>
+                <span class="faq-toggle">▼</span>
+              </div>
+              <div class="faq-a">
+                Context window dilution. Loading dozens of files into Claude's working context just to find a single route handler degrades the agent's attention on your actual instructions, and every subsequent turn costs 10x more. Fastpath does the heavy reading server-side.
+              </div>
+            </div>
+
+            <div class="faq-item">
+              <div class="faq-q" onclick="toggleFaq(this)">
+                <span>Why not just write bash scripts or grep?</span>
+                <span class="faq-toggle">▼</span>
+              </div>
+              <div class="faq-a">
+                Exact bash patterns work great—and Fastpath actually uses deterministic regex first (&lt;1ms)! But bash cannot understand fuzzy semantic concepts like: <em>"Does this requirement contradict our policy?"</em> Fastpath combines deterministic rules with Jev's System 1 neural judgments.
+              </div>
+            </div>
+
+            <div class="faq-item">
+              <div class="faq-q" onclick="toggleFaq(this)">
+                <span>What happens when the model is uncertain?</span>
+                <span class="faq-toggle">▼</span>
+              </div>
+              <div class="faq-a">
+                <strong>The Confidence Gate</strong>. If confidence falls below 0.55 or the margin between the top two choices is under 0.15, Fastpath returns <code>status: "escalate"</code> with <code>recommendedAction: "ask_user"</code>. It never hallucinates an ungrounded guess.
+              </div>
+            </div>
+
+            <div class="faq-item">
+              <div class="faq-q" onclick="toggleFaq(this)">
+                <span>Does my source code leave the machine?</span>
+                <span class="faq-toggle">▼</span>
+              </div>
+              <div class="faq-a">
+                The MCP host never receives bloated files. Before excerpts leave for semantic ranking, secrets (AWS keys, OpenAI tokens, passwords) are automatically redacted. Files are bounded to 64KB reads and max 4,000 char excerpts. Traces are stored strictly in-memory (never written to disk).
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section 5: Defensive Security -->
+  <section id="security" class="content-section">
+    <div class="container">
+      <div class="section-eyebrow">Security Invariants</div>
+      <h2 class="section-heading">Defensive by default</h2>
+      <p class="section-sub">Because tool inputs and external logs can be adversarial, agent-fastpath enforces strict operator-controlled boundaries.</p>
+
+      <div class="sec-cards-grid">
+        <div class="sec-card">
+          <div class="sec-card-title">2-Layer SSRF Defense</div>
+          <div class="sec-card-desc">
+            Browser navigation blocks private IP ranges, link-local, loopback, and metadata endpoints (169.254.169.254). Enforced via pre-navigation hostname resolution AND an inline Chromium proxy to stop DNS rebinding.
+          </div>
+        </div>
+
+        <div class="sec-card">
+          <div class="sec-card-title">Irreversible Action Gate</div>
+          <div class="sec-card-desc">
+            Buttons matching destructive verbs (delete, buy, pay, drop, merge) are marked <code>IRREVERSIBLE</code>. The browser tool refuses execution unless explicitly granted <code>allowIrreversible: true</code>.
+          </div>
+        </div>
+
+        <div class="sec-card">
+          <div class="sec-card-title">Bounded 64KB File Reads</div>
+          <div class="sec-card-desc">
+            Triage reads only within operator-allowed directory roots after resolving symlinks. Files are capped at 64KB, and at most 4,000 characters are sent for semantic relevance scoring.
+          </div>
+        </div>
+
+        <div class="sec-card">
+          <div class="sec-card-title">Secret Redaction & RAM Traces</div>
+          <div class="sec-card-desc">
+            AWS keys, GitHub tokens, Bearer headers, and passwords are scrubbed before reaching Jev or traces. Traces exist solely in an in-memory ring buffer (capped at 500) and are never written to disk.
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section 6: Setup -->
+  <section id="setup" class="content-section" style="border-bottom: none;">
+    <div class="container">
+      <div class="section-eyebrow">Installation</div>
+      <h2 class="section-heading">Connect your coding agent</h2>
+      <p class="section-sub">Works with any MCP client over standard stdio JSON-RPC.</p>
+
+      <div class="client-setup-container">
+        <div class="client-buttons">
+          <button class="client-tab-btn active" onclick="pickClientConfig('claude')">Claude Code</button>
+          <button class="client-tab-btn" onclick="pickClientConfig('cursor')">Cursor</button>
+          <button class="client-tab-btn" onclick="pickClientConfig('codex')">Codex</button>
+          <button class="client-tab-btn" onclick="pickClientConfig('antigravity')">Google Antigravity</button>
+          <button class="client-tab-btn" onclick="pickClientConfig('gemini')">Gemini CLI</button>
+          <button class="client-tab-btn" onclick="pickClientConfig('vscode')">VS Code (Copilot)</button>
+        </div>
+
+        <div class="code-display-wrap">
+          <button class="btn-copy-code" onclick="copyClientCode()">Copy Command</button>
+          <div class="code-preview" id="client-code-output">claude mcp add agent-fastpath -s user -e TYPESAFE_API_KEY=&lt;key&gt; -- npx -y agent-fastpath start</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer>
+    <div class="container footer-inner">
+      <div>
+        <strong>agent-fastpath</strong> (formerly agentctl-fastpath) • MIT License
+      </div>
+      <div>
+        Built with TypeSafe Jev & Model Context Protocol
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    // Architecture Flow Data
+    const FLOW_STAGES = [
+      {
+        title: "0. Host Coding Agent",
+        pkg: "Host Environment (Claude Code, Cursor, Codex)",
+        desc: "The host agent sends tool invocations over stdio via standard MCP JSON-RPC. When it encounters high-frequency micro-decisions (e.g. ship gates, file discovery, ambiguity checks), it delegates to fastpath instead of running a full System 2 inference loop.",
+        guarantees: [
+          "Preserves host context: avoids reading dozens of irrelevant files",
+          "Standard MCP protocol compatibility (works with 10+ major coding clients)",
+          "Zero modifications needed to agent reasoning prompts"
+        ],
+        code: `// MCP JSON-RPC Request from Host
+{
+  "jsonrpc": "2.0",
+  "method": "tools/call",
+  "params": {
+    "name": "fastpath_evaluate",
+    "arguments": {
+      "preset": "ship_gate",
+      "state": "CI run: 45 passed, 0 failed"
+    }
+  }
+}`
+      },
+      {
+        title: "Stage 1: Secret Redaction & Bounds Guard",
+        pkg: "packages/core/src/router/redaction.ts",
+        desc: "Before any state is inspected or passed downstream, it is sanitized by pattern-based redactors. Recognized secrets (AWS, OpenAI, Anthropic, GitHub, Slack tokens, private keys) are scrubbed. File reads are capped at 64KB with directory traversal protection.",
+        guarantees: [
+          "Redaction cannot be disabled or bypassed by caller arguments",
+          "Hard 64KB read cap per file prevents memory exhaustion",
+          "Path traversal checks enforce allowed project roots"
+        ],
+        code: `export function redactSecrets(text: string): string {
+  // Masks AWS, GitHub, Slack, Private Keys, and passwords
+  return text
+    .replace(/(?:ghp|gho|ghu)_[A-Za-z0-9_]{36,}/g, '[REDACTED_GITHUB_TOKEN]')
+    .replace(/AKIA[0-9A-Z]{16}/g, '[REDACTED_AWS_KEY]')
+    .replace(/-----BEGIN[ A-Z_-]+KEY-----[\\s\\S]*?-----END[ A-Z_-]+KEY-----/g, '[REDACTED_PRIVATE_KEY]');
+}`
+      },
+      {
+        title: "Stage 2: Deterministic Engine (Rules First)",
+        pkg: "packages/core/src/policies/deterministic_engine.ts",
+        desc: "Clear-cut answers are handled in pure TypeScript in under 1 millisecond. If test output clearly passes or fails, or if a shell command contains dangerous patterns (rm -rf, DROP TABLE, git push --force), the deterministic engine answers immediately with 1.0 confidence, saving 100% of LLM cost.",
+        guarantees: [
+          "Zero API calls made for clear-cut test results or dangerous commands",
+          "Execution latency < 1 ms",
+          "Unambiguous patterns return 0.99 - 1.0 confidence immediately"
+        ],
+        code: `if (preset === 'ship_gate') {
+  if (failure && !hasDiff) {
+    return { handled: true, decision: 'BLOCKED', confidence: 1.0, reasonCode: 'DETERMINISTIC_TEST_FAILURE' };
+  }
+  if (pass && !failure && !hasDiff) {
+    return { handled: true, decision: 'READY_TO_SHIP', confidence: 0.99, reasonCode: 'DETERMINISTIC_TEST_SUCCESS' };
+  }
+}`
+      },
+      {
+        title: "Stage 3: TypeSafe Jev (System One Model)",
+        pkg: "packages/provider-typesafe/src/client.ts",
+        desc: "When deterministic rules cannot answer with certainty, the request is dispatched to TypeSafe Jev. Jev is a System One micro-model trained to return calibrated, typed judgment distributions: noul (yes/no probability), score (0-4 ranked scale), or choice (categorical distribution).",
+        guarantees: [
+          "Returns typed probability distributions, not unstructured chat text",
+          "Fast ~300ms turnaround time",
+          "Calibrated probabilities ensure mathematical confidence evaluation"
+        ],
+        code: `// Question types supported by Jev
+type QuestionDef = 
+  | { type: 'noul'; instructions: string } // Yes/No probability
+  | { type: 'score'; instructions: string; criteria: string[] } // 0-4 score
+  | { type: 'choice'; instructions: string; criteria: Record<string, string> };`
+      },
+      {
+        title: "Stage 4: Confidence & Escalation Gate",
+        pkg: "packages/core/src/confidence/escalation_gate.ts",
+        desc: "Translates typed answers into one of 3 operational states: accept (proceed), review (inspect evidence), or escalate (ask user). If confidence is below 0.55 or the margin between the top two choices is under 0.15, Fastpath refuses to guess and escalates.",
+        guarantees: [
+          "escalationThreshold (default 0.55): below this triggers 'escalate'",
+          "minMargin (default 0.15): tight margins trigger 'review'",
+          "confidenceThreshold (default 0.75): above this triggers 'accept'",
+          "No hallucinations: low confidence explicitly asks the human"
+        ],
+        code: `if (minConfidence < escalationThreshold) {
+  return { status: 'escalate', reasonCode: 'LOW_CONFIDENCE_ESCALATION_REQUIRED', recommendedAction: 'fallback_large_model' };
+}
+if (minObservedMargin < minMargin) {
+  return { status: 'review', reasonCode: 'MARGIN_BELOW_THRESHOLD_AMBIGUITY', recommendedAction: 'inspect_evidence' };
+}
+if (minConfidence >= threshold) {
+  return { status: 'accept', reasonCode: 'HIGH_CONFIDENCE_ACCEPTED', recommendedAction: 'proceed' };
+}`
+      },
+      {
+        title: "Egress: In-Memory Trace Store",
+        pkg: "packages/core/src/evidence/trace_store.ts",
+        desc: "Every evaluation creates a trace entry containing the exact questions asked, normalized probability distributions, and the gate rationale. Up to 500 traces are stored in an in-memory ring buffer (never persisted to disk), inspectable via fastpath_evidence.",
+        guarantees: [
+          "Full auditability of every decision via traceId",
+          "Zero disk persistence prevents sensitive leakage",
+          "Ring buffer bounded to 500 items prevents memory leaks"
+        ],
+        code: `// Inspect via fastpath_evidence tool
+{
+  "tool": "fastpath_evidence",
+  "arguments": { "traceId": "trc_6ae27274499cf7e7" }
+}`
+      }
+    ];
+
+    function selectFlowStage(idx) {
+      document.querySelectorAll('.flow-card').forEach((el, i) => {
+        el.classList.toggle('active', i === idx);
+      });
+      const data = FLOW_STAGES[idx];
+      document.getElementById('stage-title').innerText = data.title;
+      document.getElementById('stage-path').innerText = data.pkg;
+      document.getElementById('stage-desc').innerText = data.desc;
+      document.getElementById('stage-code').innerText = data.code;
+
+      const cl = document.getElementById('stage-checklist');
+      cl.innerHTML = '';
+      data.guarantees.forEach(g => {
+        const li = document.createElement('li');
+        li.innerText = g;
+        cl.appendChild(li);
+      });
+    }
+
+    // Console Simulator Data
+    const CONSOLE_PRESETS = {
+      ship_pass: {
+        preset: "ship_gate",
+        state: "PASS tests/unit/auth.test.ts\nTests: 24 passed, 24 total\nSnapshots: 0 total\nTime: 1.45s",
+        status: "accept",
+        verdict: "READY_TO_SHIP",
+        sub: "Deterministic Rule Verified • < 1 ms",
+        stages: ["CLEAN", "MATCHED", "BYPASS", "PASSED"],
+        json: {
+          status: "accept",
+          decision: "READY_TO_SHIP",
+          confidence: 0.99,
+          reasonCode: "DETERMINISTIC_TEST_SUCCESS_VERIFIED",
+          recommendedAction: "proceed",
+          traceId: "trc_8f1a23c4e56"
+        }
+      },
+      ship_fail: {
+        preset: "ship_gate",
+        state: "FAIL tests/e2e/checkout.test.ts\n  ● Checkout › should charge credit card\n    Expected: 200\n    Received: 500\nTests: 1 failed, 23 passed, 24 total",
+        status: "accept",
+        verdict: "BLOCKED",
+        sub: "Deterministic Rule Blocked • < 1 ms",
+        stages: ["CLEAN", "MATCHED", "BYPASS", "PASSED"],
+        json: {
+          status: "accept",
+          decision: "BLOCKED",
+          confidence: 1.0,
+          reasonCode: "DETERMINISTIC_TEST_FAILURE_DETECTED",
+          recommendedAction: "proceed",
+          details: { matchedPattern: "Tests: 1 failed" },
+          traceId: "trc_4b9e81d2f07"
+        }
+      },
+      risk_drop: {
+        preset: "risk",
+        state: "DROP TABLE users CASCADE;",
+        status: "accept",
+        verdict: "HIGH_RISK",
+        sub: "Destructive SQL Pattern Flagged • < 1 ms",
+        stages: ["CLEAN", "MATCHED", "BYPASS", "PASSED"],
+        json: {
+          status: "accept",
+          decision: "HIGH_RISK",
+          confidence: 1.0,
+          reasonCode: "DETERMINISTIC_DESTRUCTIVE_PATTERN_DETECTED",
+          recommendedAction: "proceed",
+          traceId: "trc_11c39ab8de4"
+        }
+      },
+      risk_safe: {
+        preset: "risk",
+        state: "npm run test:unit -- --watch=false",
+        status: "accept",
+        verdict: "ACCEPTABLE_RISK",
+        sub: "Read-only test command verified • 320 ms",
+        stages: ["CLEAN", "FALLTHROUGH", "INFERRED", "PASSED"],
+        json: {
+          status: "accept",
+          decision: "ACCEPTABLE_RISK",
+          confidence: 0.94,
+          reasonCode: "RISK_GATE_CLEAR",
+          recommendedAction: "proceed",
+          answers: {
+            risk_rating: { choice: "safe", confidence: 0.94 },
+            is_irreversible: { noul: 0.02, confidence: 0.98 }
+          },
+          traceId: "trc_77aa201d44c"
+        }
+      },
+      ambiguity: {
+        preset: "ambiguity",
+        state: "Update user record immediately, but defer all database writes until midnight.",
+        status: "escalate",
+        verdict: "AMBIGUITY_DETECTED",
+        sub: "Contradictory Instructions • Asks User",
+        stages: ["CLEAN", "FALLTHROUGH", "INFERRED", "ESCALATE"],
+        json: {
+          status: "escalate",
+          decision: true,
+          reasonCode: "AMBIGUITY_DETECTED",
+          recommendedAction: "ask_user",
+          answers: {
+            is_ambiguous: { noul: 0.95, answer: true, confidence: 0.95 },
+            ambiguity_type: {
+              choice: "contradictory",
+              confidence: 0.93,
+              probabilities: { contradictory: 0.93, underspecified: 0.06, missing_context: 0.01, none: 0 }
+            }
+          },
+          traceId: "trc_6ae27274499"
+        }
+      },
+      ssrf: {
+        preset: "browser",
+        state: "fastpath_browser navigate: http://169.254.169.254/latest/meta-data/",
+        status: "escalate",
+        verdict: "SSRF_BLOCKED",
+        sub: "Private Address Access Blocked by Proxy",
+        stages: ["CLEAN", "PROXY REJECT", "BYPASS", "POLICY GATE"],
+        json: {
+          status: "escalate",
+          decision: "NAVIGATION_BLOCKED",
+          reasonCode: "DISALLOWED_TARGET_PRIVATE_ADDRESS",
+          recommendedAction: "ask_user",
+          details: { address: "169.254.169.254", classification: "link-local" },
+          traceId: "trc_ssrf_block_01"
+        }
+      }
+    };
+
+    function loadConsolePreset(key) {
+      document.querySelectorAll('.preset-pill').forEach(btn => btn.classList.remove('active'));
+      event.target.classList.add('active');
+
+      const data = CONSOLE_PRESETS[key];
+      document.getElementById('sim-active-preset-tag').innerText = 'preset: ' + data.preset;
+      document.getElementById('console-state-input').value = data.state;
+      renderConsoleOutput(data);
+    }
+
+    function runConsoleSim() {
+      const text = document.getElementById('console-state-input').value;
+      if (text.includes('DROP TABLE') || text.includes('rm -rf')) {
+        renderConsoleOutput(CONSOLE_PRESETS.risk_drop);
+      } else if (text.includes('FAIL') || text.includes('failed')) {
+        renderConsoleOutput(CONSOLE_PRESETS.ship_fail);
+      } else if (text.includes('PASS') || text.includes('passed')) {
+        renderConsoleOutput(CONSOLE_PRESETS.ship_pass);
+      } else if (text.includes('defer') || text.includes('contradict')) {
+        renderConsoleOutput(CONSOLE_PRESETS.ambiguity);
+      } else {
+        renderConsoleOutput(CONSOLE_PRESETS.risk_safe);
+      }
+    }
+
+    function renderConsoleOutput(data) {
+      const vBox = document.getElementById('console-verdict-box');
+      vBox.className = 'verdict-header ' + data.status;
+      document.getElementById('console-verdict-title').innerText = data.verdict;
+      document.getElementById('console-verdict-sub').innerText = data.sub;
+      document.getElementById('console-verdict-tag').innerText = data.status.toUpperCase();
+
+      for (let i = 0; i < 4; i++) {
+        const pill = document.getElementById('pill-stage-' + i);
+        const st = data.stages[i];
+        pill.querySelector('.stage-pill-status').innerText = st;
+        pill.className = 'stage-pill-box ' + (st === 'BYPASS' ? 'bypassed' : 'active');
+      }
+
+      document.getElementById('console-json-box').innerText = JSON.stringify(data.json, null, 2);
+    }
+
+    // Benchmark Calculator
+    function recalcBenchmarks() {
+      const files = parseInt(document.getElementById('slider-files').value, 10);
+      const size = parseInt(document.getElementById('slider-size').value, 10);
+      const decisions = parseInt(document.getElementById('slider-decisions').value, 10);
+
+      document.getElementById('calc-val-files').innerText = files + ' files';
+      document.getElementById('calc-val-size').innerText = size.toLocaleString() + ' tokens';
+      document.getElementById('calc-val-decisions').innerText = decisions + ' decisions';
+
+      const hostTokens = files * size;
+      const fastpathTokens = 408;
+      const pctSaved = ((hostTokens - fastpathTokens) / hostTokens) * 100;
+
+      document.getElementById('comp-meter-host').innerText = hostTokens.toLocaleString() + ' tokens';
+      document.getElementById('comp-meter-fastpath').innerText = fastpathTokens.toLocaleString() + ' tokens';
+      document.getElementById('comp-meter-fastpath').style.width = Math.max(1.8, (100 - pctSaved)).toFixed(1) + '%';
+
+      const dailyTokensSaved = (hostTokens - fastpathTokens) * decisions;
+      document.getElementById('stat-daily-tokens').innerText = dailyTokensSaved.toLocaleString();
+
+      const secondsSaved = decisions * 10.2;
+      const minutesSaved = (secondsSaved / 60).toFixed(1);
+      document.getElementById('stat-daily-time').innerText = '~' + minutesSaved + ' mins';
+    }
+
+    // Accordion toggle
+    function toggleFaq(el) {
+      el.parentElement.classList.toggle('open');
+    }
+
+    // Client Config Snippets
+    const CLIENT_CONFIGS = {
+      claude: `claude mcp add agent-fastpath -s user -e TYPESAFE_API_KEY=<key> -- npx -y agent-fastpath start`,
+      cursor: `// In ~/.cursor/mcp.json or Settings > MCP Servers:
+{
+  "mcpServers": {
+    "agent-fastpath": {
+      "command": "npx",
+      "args": ["-y", "agent-fastpath", "start"],
+      "env": { "TYPESAFE_API_KEY": "<your-key>" }
+    }
+  }
+}`,
+      codex: `// In ~/.codex/config.json:
+{
+  "mcpServers": {
+    "agent-fastpath": {
+      "command": "npx",
+      "args": ["-y", "agent-fastpath", "start"],
+      "env": { "TYPESAFE_API_KEY": "<your-key>" }
+    }
+  }
+}`,
+      antigravity: `// In antigravity mcp_config.json:
+{
+  "mcpServers": {
+    "agent-fastpath": {
+      "command": "npx",
+      "args": ["-y", "agent-fastpath", "start"],
+      "env": { "TYPESAFE_API_KEY": "<your-key>" }
+    }
+  }
+}`,
+      gemini: `npx agent-fastpath install-config gemini-cli`,
+      vscode: `// In .vscode/settings.json:
+{
+  "github.copilot.chat.mcpServers": {
+    "agent-fastpath": {
+      "command": "npx",
+      "args": ["-y", "agent-fastpath", "start"],
+      "env": { "TYPESAFE_API_KEY": "<your-key>" }
+    }
+  }
+}`
+    };
+
+    function pickClientConfig(key) {
+      document.querySelectorAll('.client-tab-btn').forEach(btn => btn.classList.remove('active'));
+      event.target.classList.add('active');
+      document.getElementById('client-code-output').innerText = CLIENT_CONFIGS[key] || '';
+    }
+
+    function copyClientCode() {
+      const code = document.getElementById('client-code-output').innerText;
+      navigator.clipboard.writeText(code).then(() => {
+        const btn = document.querySelector('.btn-copy-code');
+        btn.innerText = 'Copied!';
+        setTimeout(() => { btn.innerText = 'Copy Command'; }, 2000);
+      });
+    }
+
+    // Default on load
+    window.addEventListener('DOMContentLoaded', () => {
+      loadConsolePreset('ship_pass');
+      recalcBenchmarks();
+    });
+  </script>
+</body>
+</html>
