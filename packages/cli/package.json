@@ -1,7 +1,7 @@
 {
   "name": "agent-fastpath",
   "version": "0.1.1",
-  "description": "MCP server for Claude Code, Codex, and Cursor: fast LLM-as-a-judge decisions (ship gate, risk, relevance), file triage that keeps files out of your agent's context, and a token-light headless browser.",
+  "description": "Jev MCP server: a decision layer for Claude Code, Codex, and Cursor built on TypeSafe Jev (System One model). Ship gates, risk checks, file triage that keeps files out of your agent's context, and a safe headless browser.",
   "type": "module",
   "license": "MIT",
   "bin": {
@@ -24,6 +24,16 @@
     "url": "https://github.com/abhishekswe/agent-fastpath/issues"
   },
   "keywords": [
+    "jev",
+    "jev-mcp",
+    "typesafe",
+    "typesafe-ai",
+    "typesafe-jev",
+    "system-one",
+    "system-1",
+    "calibrated-confidence",
+    "typed-decisions",
+    "llm-evaluation",
     "mcp",
     "mcp-server",
     "model-context-protocol",

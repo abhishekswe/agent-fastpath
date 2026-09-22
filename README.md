@@ -1,6 +1,6 @@
 # agent-fastpath
 
-**An MCP server that makes small judgment calls for your coding agent: ship gates, risk checks, file triage, and browser verification, with typed, calibrated answers.**
+**A Jev MCP server: a decision layer for your coding agent, built on TypeSafe Jev (System One model). Ship gates, risk checks, file triage, and browser verification, with typed, calibrated answers.**
 
 [![npm](https://img.shields.io/npm/v/agent-fastpath)](https://www.npmjs.com/package/agent-fastpath)
 [![CI](https://github.com/abhishekswe/agent-fastpath/actions/workflows/ci.yml/badge.svg)](https://github.com/abhishekswe/agent-fastpath/actions/workflows/ci.yml)
@@ -9,7 +9,7 @@
 Coding agents like Claude Code, Codex, and Cursor spend context and time on small decisions: is this CI log ready to ship, which of these 40 files handle auth, did the page actually say "Order confirmed". agent-fastpath answers them with typed, calibrated results in milliseconds to a couple of seconds, and hands control back when it is not sure.
 
 - **Keeps files out of your agent's context.** Triage reads files on the server. In the [benchmark](docs/benchmarking.md), the agent read 408 tokens instead of 35,256.
-- **Rules first, then a fast model.** Clear-cut cases are decided by code in under a millisecond. The rest go to a fast LLM-as-a-judge model.
+- **Rules first, then Jev.** Clear-cut cases are decided by code in under a millisecond. The rest go to [TypeSafe Jev](https://typesafe.ai/blog/introducing-system-one-models-and-jev), a System One model that returns typed decisions with calibrated probabilities instead of text.
 - **Says when it is unsure.** Every result is `accept`, `review`, or `escalate`, so your agent knows when to ask you.
 - **Safe browser.** Headless Playwright with SSRF protection and a gate on irreversible actions like delete or pay.
 
@@ -22,6 +22,16 @@ Works with any MCP client, including Claude Code, Codex CLI, Cursor, OpenCode, G
 - **Risk check before destructive commands.** The `risk` preset flags `rm -rf`, `git push --force`, `DROP TABLE`, and similar.
 - **Catch ambiguous or contradictory requirements.** The `ambiguity` preset returns `ask_user` instead of guessing.
 - **Verify what a web page says.** `fastpath_browser` checks claims like "the order was confirmed" against the live page.
+
+## How it differs from a plain Jev connector
+
+A basic Jev MCP server passes your agent's questions to Jev and returns the answer. agent-fastpath adds the parts an agent needs to act on that answer safely:
+
+- **Ready-made presets** (`ship_gate`, `risk`, `severity`, `ambiguity`, `relevance`, `verify_claim`, and more), so the agent does not write question schemas.
+- **Deterministic rules before Jev**, so obvious cases like a failing build or `git push --force` are decided instantly and never cost an API call.
+- **A confidence gate** that turns low-confidence or near-tied answers into `review` or `escalate` instead of a guess.
+- **Server-side file triage and a safe browser**, so files and page HTML stay out of your agent's context.
+- **Secret redaction and evidence traces** for every decision.
 
 ## Tools
 
@@ -81,7 +91,7 @@ Without an API key the server still runs: deterministic checks work, and semanti
 ## How it decides
 
 1. **Rules first.** Clear-cut cases are answered by code in under a millisecond: a failing test run blocks `ship_gate`, `git push --force` is `HIGH_RISK`.
-2. **Then a fast model.** Everything else goes to TypeSafe System One in a single request.
+2. **Then Jev.** Everything else goes to TypeSafe Jev, the System One model, in a single request.
 3. **Then a confidence gate.** Low confidence or near-tied options return `review` or `escalate` instead of an answer.
 
 More in [architecture](docs/architecture.md).
