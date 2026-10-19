@@ -4,6 +4,7 @@
   "description": "Jev MCP server: a decision layer for Claude Code, Codex, and Cursor built on TypeSafe Jev (System One model). Ship gates, risk checks, file triage that keeps files out of your agent's context, and a safe headless browser.",
   "type": "module",
   "license": "MIT",
+  "author": "Abhishek Kumar (abhishekswe) <abhishekkr1915@gmail.com> (https://abhishekswe.github.io/)",
   "bin": {
     "agent-fastpath": "dist/index.js"
   },
@@ -19,7 +20,7 @@
     "type": "git",
     "url": "git+https://github.com/abhishekswe/agent-fastpath.git"
   },
-  "homepage": "https://github.com/abhishekswe/agent-fastpath#readme",
+  "homepage": "https://abhishekswe.github.io/agent-fastpath/",
   "bugs": {
     "url": "https://github.com/abhishekswe/agent-fastpath/issues"
   },
