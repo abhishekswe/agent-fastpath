@@ -1,0 +1,430 @@
+- generic [active] [ref=e1]:
+  - banner [ref=e2]:
+    - generic [ref=e3]:
+      - link "agent-fastpath home" [ref=e4] [cursor=pointer]:
+        - /url: "#"
+        - img [ref=e6]
+        - generic [ref=e8]: agent-fastpath
+      - list [ref=e9]:
+        - listitem [ref=e10]:
+          - link "How it works" [ref=e11] [cursor=pointer]:
+            - /url: "#how-it-works"
+        - listitem [ref=e12]:
+          - link "Examples" [ref=e13] [cursor=pointer]:
+            - /url: "#examples"
+        - listitem [ref=e14]:
+          - link "Benchmark" [ref=e15] [cursor=pointer]:
+            - /url: "#benchmark"
+        - listitem [ref=e16]:
+          - link "Why System One" [ref=e17] [cursor=pointer]:
+            - /url: "#why"
+        - listitem [ref=e18]:
+          - link "vs. plain Jev" [ref=e19] [cursor=pointer]:
+            - /url: "#compare"
+        - listitem [ref=e20]:
+          - link "Security" [ref=e21] [cursor=pointer]:
+            - /url: "#security"
+        - listitem [ref=e22]:
+          - link "Setup" [ref=e23] [cursor=pointer]:
+            - /url: "#setup"
+      - generic [ref=e24]:
+        - button "Switch color theme" [ref=e25] [cursor=pointer]:
+          - img [ref=e26]
+        - link "GitHub" [ref=e29] [cursor=pointer]:
+          - /url: https://github.com/abhishekswe/agent-fastpath
+          - img [ref=e30]
+          - generic [ref=e32]: GitHub
+  - main [ref=e33]:
+    - generic [ref=e35]:
+      - generic [ref=e36]:
+        - generic [ref=e37]: MCP server
+        - generic [ref=e38]: •
+        - generic [ref=e39]: built on TypeSafe Jev
+      - heading "The Jev MCP server for coding agents." [level=1] [ref=e40]
+      - paragraph [ref=e41]:
+        - text: A fast decision layer for Claude Code, Codex, Cursor, and nine more agents.
+        - strong [ref=e42]: agent-fastpath
+        - text: answers the small questions agents keep stopping on (is CI ready to ship, which files handle auth, is this command safe) with typed, calibrated results, and hands control back when it is not sure.
+      - generic [ref=e43]:
+        - generic [ref=e44]:
+          - generic [ref=e45]: $
+          - code [ref=e46]: claude mcp add agent-fastpath -s user -e TYPESAFE_API_KEY=<key> -- npx -y agent-fastpath start
+          - button "Copy" [ref=e47] [cursor=pointer]
+        - link "Other agents →" [ref=e48] [cursor=pointer]:
+          - /url: "#setup"
+        - link "npm" [ref=e49] [cursor=pointer]:
+          - /url: https://www.npmjs.com/package/agent-fastpath
+      - generic [ref=e50]:
+        - generic [ref=e51]:
+          - generic [ref=e52]: 98.8%
+          - generic [ref=e53]: Less host context in file triage
+        - generic [ref=e54]:
+          - generic [ref=e55]: < 1 ms
+          - generic [ref=e56]: Rules decide clear cases
+        - generic [ref=e57]:
+          - generic [ref=e58]: ~350 ms
+          - generic [ref=e59]: Typical Jev decision
+        - generic [ref=e60]:
+          - generic [ref=e61]: 3 states
+          - generic [ref=e62]: Accept • Review • Escalate
+      - generic [ref=e63]:
+        - generic [ref=e64]:
+          - generic [ref=e69]: triage 35 source files for "SSRF protection"
+          - generic [ref=e70]: measured
+        - generic [ref=e71]:
+          - generic [ref=e72]:
+            - generic [ref=e73]: Agent reads the files itself
+            - generic [ref=e74]:
+              - text: "Files read by the agent:"
+              - strong [ref=e75]: "35"
+            - generic [ref=e76]:
+              - text: "Host context used:"
+              - strong [ref=e77]: 35,256 tokens
+          - generic [ref=e78]:
+            - generic [ref=e79]: Agent calls fastpath_triage
+            - generic [ref=e80]:
+              - text: "Host context used:"
+              - strong [ref=e81]: 408 tokens
+              - text: (98.8% less)
+            - generic [ref=e82]:
+              - text: "Latency:"
+              - strong [ref=e83]: 2.9 s
+            - generic [ref=e84]:
+              - text: "Top hit:"
+              - strong [ref=e85]: network_policy.ts
+              - text: (correct)
+        - generic [ref=e86]:
+          - text: Run on the agent-fastpath repository, September 2026.
+          - link "Method and full results" [ref=e87] [cursor=pointer]:
+            - /url: https://github.com/abhishekswe/agent-fastpath/blob/main/docs/benchmarking.md
+    - generic [ref=e89]:
+      - generic [ref=e90]: How it works
+      - heading "Rules first, then Jev, then a confidence gate" [level=2] [ref=e91]
+      - paragraph [ref=e92]:
+        - text: Clear-cut cases are decided by code without an API call. Everything else goes to TypeSafe Jev in one request, and a gate turns low-confidence answers into
+        - code [ref=e93]: review
+        - text: or
+        - code [ref=e94]: escalate
+        - text: instead of a guess. Select a stage to see what it does.
+      - generic [ref=e95]:
+        - generic [ref=e96]:
+          - button "0 Your coding agent Claude Code, Codex, Cursor, Antigravity, Pi, and any MCP client MCP stdio" [pressed] [ref=e97] [cursor=pointer]:
+            - generic [ref=e98]:
+              - generic [ref=e99]: "0"
+              - generic [ref=e100]:
+                - text: Your coding agent
+                - text: Claude Code, Codex, Cursor, Antigravity, Pi, and any MCP client
+            - generic [ref=e101]: MCP stdio
+          - button "1 Redaction and limits Secrets redacted; triage reads only allowed roots, 64 KB per file always on" [ref=e102] [cursor=pointer]:
+            - generic [ref=e103]:
+              - generic [ref=e104]: "1"
+              - generic [ref=e105]:
+                - text: Redaction and limits
+                - text: Secrets redacted; triage reads only allowed roots, 64 KB per file
+            - generic [ref=e106]: always on
+          - button "2 Rules first Test summaries, rm -rf, git push --force, DROP TABLE < 1 ms" [ref=e107] [cursor=pointer]:
+            - generic [ref=e108]:
+              - generic [ref=e109]: "2"
+              - generic [ref=e110]:
+                - text: Rules first
+                - text: Test summaries, rm -rf, git push --force, DROP TABLE
+            - generic [ref=e111]: < 1 ms
+          - button "3 TypeSafe Jev Choice, score, or yes/no probability in one request ~350 ms" [ref=e112] [cursor=pointer]:
+            - generic [ref=e113]:
+              - generic [ref=e114]: "3"
+              - generic [ref=e115]:
+                - text: TypeSafe Jev
+                - text: Choice, score, or yes/no probability in one request
+            - generic [ref=e116]: ~350 ms
+          - button "4 Confidence gate Accept at 0.75, escalate below 0.55, review on near ties tunable" [ref=e117] [cursor=pointer]:
+            - generic [ref=e118]:
+              - generic [ref=e119]: "4"
+              - generic [ref=e120]:
+                - text: Confidence gate
+                - text: Accept at 0.75, escalate below 0.55, review on near ties
+            - generic [ref=e121]: tunable
+          - button "5 Evidence trace Every decision is explainable by traceId last 500" [ref=e122] [cursor=pointer]:
+            - generic [ref=e123]:
+              - generic [ref=e124]: "5"
+              - generic [ref=e125]:
+                - text: Evidence trace
+                - text: Every decision is explainable by traceId
+            - generic [ref=e126]: last 500
+        - generic [ref=e127]:
+          - generic [ref=e128]:
+            - heading "Your coding agent" [level=3] [ref=e129]
+            - generic [ref=e130]: any MCP client
+          - generic [ref=e131]:
+            - paragraph [ref=e132]: When the agent hits a small judgment (is this ready to ship, which files matter, is this safe), it calls an agent-fastpath tool over MCP instead of working it out in its own context.
+            - generic [ref=e133]:
+              - generic [ref=e134]: What it guarantees
+              - list [ref=e135]:
+                - listitem [ref=e136]: — Standard MCP over stdio; no changes to your agent
+                - listitem [ref=e137]: — Setup for 12 agents via install-config
+                - listitem [ref=e138]: "— Five tools: evaluate, triage, browser, evidence, capabilities"
+            - generic [ref=e139]:
+              - generic [ref=e140]: From the source
+              - generic [ref=e141]: "{ \"tool\": \"fastpath_evaluate\", \"arguments\": { \"preset\": \"ship_gate\", \"state\": \"Tests: 24 passed, 24 total\" } }"
+    - generic [ref=e143]:
+      - generic [ref=e144]: Examples
+      - heading "Real responses" [level=2] [ref=e145]
+      - paragraph [ref=e146]: Each example is a recorded response from agent-fastpath 0.2.0. The semantic ones were answered by TypeSafe Jev, so your confidence values will differ slightly.
+      - generic [ref=e147]:
+        - generic [ref=e148]:
+          - group "Examples" [ref=e149]:
+            - 'button "Ship gate: clean" [pressed] [ref=e150] [cursor=pointer]'
+            - 'button "Ship gate: failing" [ref=e151] [cursor=pointer]'
+            - 'button "Risk: DROP TABLE" [ref=e152] [cursor=pointer]'
+            - 'button "Risk: test command" [ref=e153] [cursor=pointer]'
+            - button "Ambiguity" [ref=e154] [cursor=pointer]
+            - 'button "Browser: metadata URL" [ref=e155] [cursor=pointer]'
+          - generic [ref=e156]: fastpath_evaluate · ship_gate
+        - generic [ref=e157]:
+          - generic [ref=e158]:
+            - generic [ref=e159]: Input the agent sent
+            - generic [ref=e160]: "PASS tests/unit/auth.test.ts Tests: 24 passed, 24 total Time: 1.45s"
+          - generic [ref=e161]:
+            - generic [ref=e162]:
+              - generic [ref=e163]: Result
+              - generic [ref=e164]:
+                - generic [ref=e165]:
+                  - generic [ref=e166]: READY_TO_SHIP
+                  - generic [ref=e167]: Decided by a rule, no API call
+                - generic [ref=e168]: accept
+            - generic [ref=e169]:
+              - generic [ref=e170]: Which stage decided
+              - generic [ref=e171]:
+                - generic [ref=e172]:
+                  - generic [ref=e173]: Redact
+                  - generic [ref=e174]: clean
+                - generic [ref=e175]:
+                  - generic [ref=e176]: Rules
+                  - generic [ref=e177]: matched
+                - generic [ref=e178]:
+                  - generic [ref=e179]: Jev
+                  - generic [ref=e180]: not called
+                - generic [ref=e181]:
+                  - generic [ref=e182]: Gate
+                  - generic [ref=e183]: accept
+            - generic [ref=e184]:
+              - generic [ref=e185]: Response
+              - generic [ref=e186]: "{ \"status\": \"accept\", \"decision\": \"READY_TO_SHIP\", \"confidence\": 0.99, \"answers\": {}, \"reasonCode\": \"DETERMINISTIC_TEST_SUCCESS_VERIFIED\", \"recommendedAction\": \"proceed\", \"traceId\": \"trc_12ff729cf686334a\" }"
+    - generic [ref=e188]:
+      - generic [ref=e189]: Benchmark
+      - heading "Estimate the context you save" [level=2] [ref=e190]
+      - paragraph [ref=e191]: Triage reads files on the server, so your agent only sees ranked results with short snippets. Move the sliders to estimate the saving for your repository.
+      - generic [ref=e192]:
+        - generic [ref=e193]:
+          - generic [ref=e194]:
+            - generic [ref=e195]:
+              - generic [ref=e196]: Files to triage
+              - generic [ref=e197]: 35 files
+            - slider "Files to triage 35 files" [ref=e198]: "35"
+          - generic [ref=e199]:
+            - generic [ref=e200]:
+              - generic [ref=e201]: Average file size
+              - generic [ref=e202]: 1,000 tokens
+            - slider "Average file size 1,000 tokens" [ref=e203]: "1000"
+          - generic [ref=e204]:
+            - generic [ref=e205]:
+              - generic [ref=e206]: Triage calls per day
+              - generic [ref=e207]: 10 calls
+            - slider "Triage calls per day 10 calls" [ref=e208]: "10"
+        - generic [ref=e209]:
+          - generic [ref=e210]:
+            - generic [ref=e211]: Agent reads every file
+            - generic [ref=e214]: 35,000 tokens
+          - generic [ref=e215]:
+            - generic [ref=e216]: Agent reads the triage result
+            - generic [ref=e219]: ≈ 408 tokens
+        - generic [ref=e220]:
+          - generic [ref=e221]:
+            - generic [ref=e222]: 34,592
+            - generic [ref=e223]: Host tokens avoided per call
+          - generic [ref=e224]:
+            - generic [ref=e225]: 345,920
+            - generic [ref=e226]: Host tokens avoided per day
+          - generic [ref=e227]:
+            - generic [ref=e228]: 98.8%
+            - generic [ref=e229]: Less host context
+        - paragraph [ref=e230]:
+          - text: "Estimate. It assumes the triage response stays near the measured 408 tokens (top 10 results with snippets). Measured result: 35 files, 35,256 tokens reduced to 408. Triage sends redacted excerpts of up to 4,000 characters per file to TypeSafe for scoring, so the saving is in your agent's context, not in data sent."
+          - link "How it was measured" [ref=e231] [cursor=pointer]:
+            - /url: https://github.com/abhishekswe/agent-fastpath/blob/main/docs/benchmarking.md
+    - generic [ref=e233]:
+      - generic [ref=e234]: Why a System One layer
+      - heading "Coding agents need fast reflexes, not only deep reasoning" [level=2] [ref=e235]
+      - paragraph [ref=e236]: Your agent is good at slow, deliberate work. It is wasteful at the quick judgments in between. agent-fastpath takes those.
+      - generic [ref=e237]:
+        - generic [ref=e238]:
+          - paragraph [ref=e239]:
+            - text: "Many agent steps are small judgments: did the tests pass, which files matter, is this command safe, is this request contradictory. When the agent answers them itself it reads whole files and logs into its context, then reasons in free text."
+            - strong [ref=e240]: agent-fastpath answers them in one call
+            - text: ": rules for the clear cases,"
+            - link "TypeSafe Jev" [ref=e241] [cursor=pointer]:
+              - /url: https://typesafe.ai/blog/introducing-system-one-models-and-jev
+            - text: for the rest, and a typed result the agent can act on.
+          - generic [ref=e242]: System 2 (your agent) vs. System 1 (agent-fastpath)
+          - table [ref=e244]:
+            - rowgroup [ref=e245]:
+              - row "Your coding agent agent-fastpath" [ref=e246]:
+                - columnheader [ref=e247]
+                - columnheader "Your coding agent" [ref=e248]
+                - columnheader "agent-fastpath" [ref=e249]
+            - rowgroup [ref=e250]:
+              - row "Good at Planning, reasoning, writing code Ship gates, triage, risk and ambiguity checks" [ref=e251]:
+                - cell "Good at" [ref=e252]:
+                  - strong [ref=e253]: Good at
+                - cell "Planning, reasoning, writing code" [ref=e254]
+                - cell "Ship gates, triage, risk and ambiguity checks" [ref=e255]
+              - row "Speed Seconds per model turn < 1 ms (rules) to ~350 ms (Jev)" [ref=e256]:
+                - cell "Speed" [ref=e257]:
+                  - strong [ref=e258]: Speed
+                - cell "Seconds per model turn" [ref=e259]
+                - cell "< 1 ms (rules) to ~350 ms (Jev)" [ref=e260]
+              - row "Reads Whole files into its context Files on the server; returns ranked snippets" [ref=e261]:
+                - cell "Reads" [ref=e262]:
+                  - strong [ref=e263]: Reads
+                - cell "Whole files into its context" [ref=e264]
+                - cell "Files on the server; returns ranked snippets" [ref=e265]
+              - row "Answers with Free text Typed decision, probabilities, and a status" [ref=e266]:
+                - cell "Answers with" [ref=e267]:
+                  - strong [ref=e268]: Answers with
+                - cell "Free text" [ref=e269]
+                - cell "Typed decision, probabilities, and a status" [ref=e270]
+        - generic [ref=e271]:
+          - generic [ref=e272]: Questions
+          - generic [ref=e273]:
+            - group [ref=e274]:
+              - generic "Why not let the agent read the files itself? ▾" [ref=e275] [cursor=pointer]
+              - generic [ref=e276]: It works, but every file it reads stays in its context for the rest of the session and competes with your instructions. In the benchmark, triage cut the agent's context for the same task from 35,256 tokens to 408.
+            - group [ref=e277]:
+              - generic "Why not grep or a script? ▾" [ref=e278] [cursor=pointer]
+            - group [ref=e279]:
+              - generic "What happens when it is not sure? ▾" [ref=e280] [cursor=pointer]
+            - group [ref=e281]:
+              - generic "Does my code leave the machine? ▾" [ref=e282] [cursor=pointer]
+            - group [ref=e283]:
+              - generic "Do I need a TypeSafe API key? ▾" [ref=e284] [cursor=pointer]
+    - generic [ref=e286]:
+      - generic [ref=e287]: Compared with a plain Jev connector
+      - heading "More than a pipe to Jev" [level=2] [ref=e288]
+      - paragraph [ref=e289]: A basic Jev MCP server passes your agent's questions to Jev and returns the answer. agent-fastpath adds what an agent needs to act on that answer safely.
+      - table [ref=e291]:
+        - rowgroup [ref=e292]:
+          - row "Plain Jev connector agent-fastpath" [ref=e293]:
+            - columnheader [ref=e294]
+            - columnheader "Plain Jev connector" [ref=e295]
+            - columnheader "agent-fastpath" [ref=e296]
+        - rowgroup [ref=e297]:
+          - 'row "Questions The agent writes question schemas Presets: ship_gate, risk, severity, ambiguity, relevance, verify_claim, and more" [ref=e298]':
+            - cell "Questions" [ref=e299]:
+              - strong [ref=e300]: Questions
+            - cell "The agent writes question schemas" [ref=e301]
+            - 'cell "Presets: ship_gate, risk, severity, ambiguity, relevance, verify_claim, and more" [ref=e302]'
+          - row "Clear cases Every call goes to the API Rules decide failing builds, force pushes, and DROP TABLE in under 1 ms, with no API call" [ref=e303]:
+            - cell "Clear cases" [ref=e304]:
+              - strong [ref=e305]: Clear cases
+            - cell "Every call goes to the API" [ref=e306]
+            - cell "Rules decide failing builds, force pushes, and DROP TABLE in under 1 ms, with no API call" [ref=e307]
+          - row "Uncertain answers Raw probabilities; the agent decides A gate returns accept, review, or escalate, with a recommended action" [ref=e308]:
+            - cell "Uncertain answers" [ref=e309]:
+              - strong [ref=e310]: Uncertain answers
+            - cell "Raw probabilities; the agent decides" [ref=e311]
+            - cell "A gate returns accept, review, or escalate, with a recommended action" [ref=e312]
+          - row "Files The agent reads them first Server-side triage; files stay out of the agent's context" [ref=e313]:
+            - cell "Files" [ref=e314]:
+              - strong [ref=e315]: Files
+            - cell "The agent reads them first" [ref=e316]
+            - cell "Server-side triage; files stay out of the agent's context" [ref=e317]
+          - row "Web pages Not covered Headless browser with SSRF blocking and an irreversible-action gate" [ref=e318]:
+            - cell "Web pages" [ref=e319]:
+              - strong [ref=e320]: Web pages
+            - cell "Not covered" [ref=e321]
+            - cell "Headless browser with SSRF blocking and an irreversible-action gate" [ref=e322]
+          - row "Audit Varies Secret redaction and an evidence trace for every decision" [ref=e323]:
+            - cell "Audit" [ref=e324]:
+              - strong [ref=e325]: Audit
+            - cell "Varies" [ref=e326]
+            - cell "Secret redaction and an evidence trace for every decision" [ref=e327]
+    - generic [ref=e329]:
+      - generic [ref=e330]: Security
+      - heading "Safe by default" [level=2] [ref=e331]
+      - paragraph [ref=e332]: Tool inputs, logs, and web pages can be hostile. You set the limits; tool callers can tighten them but never loosen them.
+      - generic [ref=e333]:
+        - generic [ref=e334]:
+          - generic [ref=e335]: SSRF blocking
+          - generic [ref=e336]: The browser cannot reach localhost, private networks, or cloud metadata endpoints such as 169.254.169.254. Every connection, including redirects and page scripts, goes through a checking proxy.
+        - generic [ref=e337]:
+          - generic [ref=e338]: Irreversible-action gate
+          - generic [ref=e339]:
+            - text: Elements labelled like delete, pay, checkout, publish, deploy, or merge are flagged. The browser will not click them unless the call sets
+            - code [ref=e340]: "allowIrreversible: true"
+            - text: .
+        - generic [ref=e341]:
+          - generic [ref=e342]: Bounded file reads
+          - generic [ref=e343]: Triage reads only inside the directories you allow, after resolving symlinks, and at most 64 KB per file.
+        - generic [ref=e344]:
+          - generic [ref=e345]: Secret redaction
+          - generic [ref=e346]: TypeSafe, Anthropic, OpenAI, GitHub, AWS, and Slack keys, private keys, bearer tokens, and password fields are redacted before semantic requests and traces.
+      - paragraph [ref=e347]:
+        - text: Details in the
+        - link "security model" [ref=e348] [cursor=pointer]:
+          - /url: https://github.com/abhishekswe/agent-fastpath/blob/main/docs/security.md
+        - text: . Report vulnerabilities privately through
+        - link "GitHub security advisories" [ref=e349] [cursor=pointer]:
+          - /url: https://github.com/abhishekswe/agent-fastpath/security/advisories/new
+        - text: .
+    - generic [ref=e351]:
+      - generic [ref=e352]: Setup
+      - heading "Connect your coding agent" [level=2] [ref=e353]
+      - paragraph [ref=e354]:
+        - text: Pick your agent and copy the config. You can also print it with
+        - code [ref=e355]: npx agent-fastpath install-config <agent>
+        - text: .
+      - generic [ref=e356]:
+        - group "Coding agent" [ref=e357]:
+          - button "Claude Code" [pressed] [ref=e358] [cursor=pointer]
+          - button "Codex" [ref=e359] [cursor=pointer]
+          - button "Cursor" [ref=e360] [cursor=pointer]
+          - button "Antigravity" [ref=e361] [cursor=pointer]
+          - button "Gemini CLI" [ref=e362] [cursor=pointer]
+          - button "OpenCode" [ref=e363] [cursor=pointer]
+          - button "VS Code (Copilot)" [ref=e364] [cursor=pointer]
+          - button "Cline" [ref=e365] [cursor=pointer]
+          - button "Zed" [ref=e366] [cursor=pointer]
+          - button "Amp" [ref=e367] [cursor=pointer]
+          - button "Pi" [ref=e368] [cursor=pointer]
+          - button "Other MCP client" [ref=e369] [cursor=pointer]
+        - generic [ref=e370]:
+          - button "Copy" [ref=e371] [cursor=pointer]
+          - generic [ref=e372]: claude mcp add agent-fastpath -s user -e TYPESAFE_API_KEY=<your-typesafe-api-key> -- npx -y agent-fastpath start
+        - generic [ref=e373]:
+          - generic [ref=e374]:
+            - strong [ref=e375]: Node.js 20.12+
+            - text: Runs through
+            - code [ref=e376]: npx
+            - text: ; nothing else to install.
+          - generic [ref=e377]:
+            - strong [ref=e378]: TypeSafe API key
+            - text: Needed for semantic questions. Rules work without it.
+          - generic [ref=e379]:
+            - strong [ref=e380]: Chromium (optional)
+            - code [ref=e381]: npx playwright install chromium
+            - text: for the browser tool.
+  - contentinfo [ref=e382]:
+    - generic [ref=e383]:
+      - generic [ref=e384]:
+        - strong [ref=e385]: agent-fastpath
+        - text: • MIT License • Built on TypeSafe Jev and the Model Context Protocol • Made by
+        - link "Abhishek Kumar (abhishekswe)" [ref=e386] [cursor=pointer]:
+          - /url: https://abhishekswe.github.io/
+      - navigation "Footer" [ref=e387]:
+        - link "GitHub" [ref=e388] [cursor=pointer]:
+          - /url: https://github.com/abhishekswe/agent-fastpath
+        - link "npm" [ref=e389] [cursor=pointer]:
+          - /url: https://www.npmjs.com/package/agent-fastpath
+        - link "Docs" [ref=e390] [cursor=pointer]:
+          - /url: https://github.com/abhishekswe/agent-fastpath/blob/main/docs/configuration.md
+        - link "Changelog" [ref=e391] [cursor=pointer]:
+          - /url: https://github.com/abhishekswe/agent-fastpath/blob/main/CHANGELOG.md

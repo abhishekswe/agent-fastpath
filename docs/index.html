@@ -6,7 +6,7 @@
   <title>agent-fastpath: the Jev MCP server for coding agents</title>
   <meta name="description" content="A Jev MCP server and fast decision layer for Claude Code, Codex, Cursor, and other coding agents: ship gates, risk checks, file triage, and safe browser checks with typed, calibrated answers." />
   <link rel="canonical" href="https://abhishekswe.github.io/agent-fastpath/" />
-  <meta name="theme-color" content="#090a0d" />
+  <meta name="theme-color" content="#f6f7f9" />
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23111318'/%3E%3Cpath d='M18 4 8 18h7l-2 10 11-15h-7z' fill='%2338bdf8'/%3E%3C/svg%3E" />
 
   <meta property="og:type" content="website" />
@@ -52,6 +52,25 @@
 
   <style>
     :root {
+      --bg: #f6f7f9; --surface: #ffffff; --surface-hover: #f1f3f6; --surface-elevated: #eef0f4;
+      --surface-sunken: #f3f4f7; --border: #e3e6eb; --border-focus: #c5cad3; --header-bg: rgba(246, 247, 249, 0.9);
+      --text: #0f1115; --text-muted: #4b5563; --text-faint: #5f6673; --code-text: #1f2937;
+      --accent: #0369a1; --accent-muted: rgba(3, 105, 161, 0.08); --accent-border: rgba(3, 105, 161, 0.3);
+      --success: #047857; --success-muted: rgba(4, 120, 87, 0.08); --success-border: rgba(4, 120, 87, 0.3);
+      --warning: #b45309; --warning-muted: rgba(180, 83, 9, 0.08); --warning-border: rgba(180, 83, 9, 0.3);
+      --danger: #b91c1c; --danger-muted: rgba(185, 28, 28, 0.07); --danger-border: rgba(185, 28, 28, 0.3);
+      --btn-bg: #0f1115; --btn-text: #ffffff; --btn-hover: #1f2937;
+
+      --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      --font-mono: 'JetBrains Mono', ui-monospace, Menlo, Consolas, monospace;
+      --radius: 8px;
+      --radius-lg: 12px;
+      --transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      color-scheme: light;
+    }
+
+    /* Dark theme: only when the visitor picks it with the toggle. */
+    :root[data-theme="dark"] {
       --bg: #090a0d;
       --surface: #111318;
       --surface-hover: #16181f;
@@ -83,38 +102,7 @@
       --btn-text: #090a0d;
       --btn-hover: #e2e8f0;
 
-      --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      --font-mono: 'JetBrains Mono', ui-monospace, Menlo, Consolas, monospace;
-      --radius: 8px;
-      --radius-lg: 12px;
-      --transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
       color-scheme: dark;
-    }
-
-    /* Light theme: follows the OS unless the visitor picked a theme. */
-    @media (prefers-color-scheme: light) {
-      :root:not([data-theme="dark"]) {
-        --bg: #f6f7f9; --surface: #ffffff; --surface-hover: #f1f3f6; --surface-elevated: #eef0f4;
-        --surface-sunken: #f3f4f7; --border: #e3e6eb; --border-focus: #c5cad3; --header-bg: rgba(246, 247, 249, 0.9);
-        --text: #0f1115; --text-muted: #4b5563; --text-faint: #5f6673; --code-text: #1f2937;
-        --accent: #0369a1; --accent-muted: rgba(3, 105, 161, 0.08); --accent-border: rgba(3, 105, 161, 0.3);
-        --success: #047857; --success-muted: rgba(4, 120, 87, 0.08); --success-border: rgba(4, 120, 87, 0.3);
-        --warning: #b45309; --warning-muted: rgba(180, 83, 9, 0.08); --warning-border: rgba(180, 83, 9, 0.3);
-        --danger: #b91c1c; --danger-muted: rgba(185, 28, 28, 0.07); --danger-border: rgba(185, 28, 28, 0.3);
-        --btn-bg: #0f1115; --btn-text: #ffffff; --btn-hover: #1f2937;
-        color-scheme: light;
-      }
-    }
-    :root[data-theme="light"] {
-      --bg: #f6f7f9; --surface: #ffffff; --surface-hover: #f1f3f6; --surface-elevated: #eef0f4;
-      --surface-sunken: #f3f4f7; --border: #e3e6eb; --border-focus: #c5cad3; --header-bg: rgba(246, 247, 249, 0.9);
-      --text: #0f1115; --text-muted: #4b5563; --text-faint: #5f6673; --code-text: #1f2937;
-      --accent: #0369a1; --accent-muted: rgba(3, 105, 161, 0.08); --accent-border: rgba(3, 105, 161, 0.3);
-      --success: #047857; --success-muted: rgba(4, 120, 87, 0.08); --success-border: rgba(4, 120, 87, 0.3);
-      --warning: #b45309; --warning-muted: rgba(180, 83, 9, 0.08); --warning-border: rgba(180, 83, 9, 0.3);
-      --danger: #b91c1c; --danger-muted: rgba(185, 28, 28, 0.07); --danger-border: rgba(185, 28, 28, 0.3);
-      --btn-bg: #0f1115; --btn-text: #ffffff; --btn-hover: #1f2937;
-      color-scheme: light;
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -809,7 +797,7 @@
   </footer>
 
   <script>
-    // Theme: explicit choice wins over the OS setting. Storage can be unavailable.
+    // Theme: light by default; the toggle switches to dark. Storage can be unavailable.
     (function initTheme() {
       const root = document.documentElement;
       try {
@@ -817,8 +805,7 @@
         if (saved === 'light' || saved === 'dark') root.dataset.theme = saved;
       } catch (e) { /* storage blocked: follow the OS */ }
       document.getElementById('theme-toggle').addEventListener('click', () => {
-        const current = root.dataset.theme ||
-          (matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+        const current = root.dataset.theme || 'light';
         const next = current === 'light' ? 'dark' : 'light';
         root.dataset.theme = next;
         try { localStorage.setItem('fastpath-theme', next); } catch (e) { /* ignore */ }
