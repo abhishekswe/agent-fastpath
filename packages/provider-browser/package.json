@@ -10,6 +10,6 @@
   "types": "./src/index.ts",
   "dependencies": {
     "@agent-fastpath/core": "0.1.0",
-    "playwright": "^1.50.0"
+    "playwright": "^1.64.1"
   }
 }
